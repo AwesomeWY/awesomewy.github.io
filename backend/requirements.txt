@@ -1,0 +1,10 @@
+# 한눈·주식 백엔드 (참고 구현)
+# 최신 버전/약관은 각 패키지·데이터 제공처 공식 문서를 반드시 재확인할 것.
+fastapi>=0.110
+uvicorn[standard]>=0.29
+pandas>=2.2
+numpy>=1.26
+ta>=0.11            # 기술적 지표 (RSI, MACD, Bollinger 등)
+pykrx>=1.0.45       # KRX 시세·수급 (외국인/기관 순매수)
+OpenDartReader>=0.2.4  # DART 전자공시 재무제표
+pydantic>=2.6

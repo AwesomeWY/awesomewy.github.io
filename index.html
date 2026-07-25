@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>한눈에 보는 한국주식 분석 · 판단 보조 대시보드</title>
+  <meta name="description" content="KOSPI/KOSDAQ 종목을 차트·수급·회사체력·가격매력도 4축으로 분석해 초보자도 한눈에 이해하는 판단 보조 대시보드. 투자 자문이 아닌 참고용 보조 도구." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%8A%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="assets/styles.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <div class="logo">한눈<span class="dot">·</span>주식</div>
+      <div class="tag">감정적 매매를 줄여주는 <b>판단 보조</b> 대시보드 · 투자 자문 아님</div>
+    </header>
+
+    <div class="demo-banner">
+      🧪 데모 화면입니다. GitHub Pages는 정적 호스팅이라 실시간 시세 대신
+      Python 백엔드가 미리 계산해 둔 <b>샘플 스냅샷</b>을 보여줍니다.
+      실서비스 연결 방법은 저장소 README를 참고하세요.
+    </div>
+
+    <div class="searchbar">
+      <input id="q" type="text" inputmode="numeric"
+             placeholder="종목코드(예: 005930) 또는 종목명(예: 삼성전자) 입력" />
+      <button id="go">분석</button>
+    </div>
+    <div class="chips" id="chips">
+      <span class="chip" style="pointer-events:none">예시 종목 불러오는 중…</span>
+    </div>
+
+    <main id="result">
+      <div class="card loading">종목을 선택하면 분석 결과가 여기에 표시됩니다.</div>
+    </main>
+  </div>
+
+  <script src="assets/chart.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+{
+  "stocks": [
+    {
+      "code": "005930",
+      "name": "삼성전자",
+      "market": "KOSPI",
+      "sector": "반도체",
+      "signal": "neutral",
+      "combo": "중성장 + 고안정 + 적정가격"
+    },
+    {
+      "code": "247540",
+      "name": "에코프로비엠",
+      "market": "KOSDAQ",
+      "sector": "2차전지 소재",
+      "signal": "watch",
+      "combo": "고성장 + 중안정 + 고평가(성장 프리미엄)"
+    },
+    {
+      "code": "000000",
+      "name": "샘플소재(가상)",
+      "market": "KOSPI",
+      "sector": "화학",
+      "signal": "caution",
+      "combo": "저성장(역성장) + 중안정 + 저평가(밸류트랩 의심)"
+    }
+  ]
+}

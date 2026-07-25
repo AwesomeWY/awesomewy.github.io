@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Node (dev tooling only)
+node_modules/
+
+# OS
+.DS_Store
