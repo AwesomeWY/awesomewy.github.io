@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>나만의 스토리북 만들기 📖</title>
+<style>
+  /* ===== 기본/토큰 ===== */
+  :root{
+    --bg1:#fff7fb; --bg2:#eef6ff;
+    --pink:#ffd6e7; --pink-deep:#ff8bbd;
+    --blue:#cfe6ff; --blue-deep:#5aa9ff;
+    --yellow:#fff2bf; --yellow-deep:#ffcf3f;
+    --green:#c7f0d8; --green-deep:#2fbf71;
+    --purple:#e6d9ff; --purple-deep:#a281ff;
+    --ink:#40364d; --ink-soft:#6d6480;
+    --card:#ffffff;
+    --radius:22px;
+    --shadow:0 10px 24px rgba(120,90,160,.14);
+    --shadow-soft:0 4px 12px rgba(120,90,160,.10);
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    font-family:"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;
+    font-size:19px; line-height:1.6; color:var(--ink);
+    background:linear-gradient(160deg,var(--bg1),var(--bg2));
+    min-height:100vh;
+  }
+  button{ font-family:inherit; cursor:pointer; }
+
+  /* ===== 상단 헤더/진행바 ===== */
+  .app-header{
+    position:sticky; top:0; z-index:20;
+    background:rgba(255,255,255,.85); backdrop-filter:blur(8px);
+    border-bottom:3px solid var(--pink);
+    padding:12px 16px 14px;
+  }
+  .app-title{
+    text-align:center; font-size:22px; font-weight:800; margin:2px 0 10px;
+    color:var(--ink);
+  }
+  .app-title .emoji{ font-size:24px; }
+  .progress-wrap{ max-width:760px; margin:0 auto; }
+  .progress-bar{
+    display:flex; gap:6px; align-items:center;
+  }
+  .step-dot{
+    flex:1; height:14px; border-radius:99px; background:#ececf5;
+    transition:background .3s, transform .3s;
+  }
+  .step-dot.done{ background:var(--green-deep); }
+  .step-dot.current{ background:var(--blue-deep); transform:scaleY(1.4); }
+  .progress-label{
+    text-align:center; margin-top:8px; font-weight:700; color:var(--ink-soft);
+    font-size:16px;
+  }
+
+  /* ===== 메인 ===== */
+  main{ max-width:760px; margin:0 auto; padding:20px 16px 140px; }
+  .step-badge{
+    display:inline-block; background:var(--purple); color:#5b3fae;
+    font-weight:800; padding:6px 16px; border-radius:99px; font-size:16px;
+    margin-bottom:10px;
+  }
+  .question{
+    font-size:26px; font-weight:800; margin:6px 0 6px; line-height:1.4;
+  }
+  .hint{ color:var(--ink-soft); font-size:17px; margin-bottom:18px; }
+
+  .section-label{
+    font-weight:800; font-size:18px; margin:22px 0 10px; color:var(--ink);
+    display:flex; align-items:center; gap:8px;
+  }
+  .section-label .num{
+    background:var(--blue-deep); color:#fff; width:26px; height:26px;
+    border-radius:50%; display:inline-flex; align-items:center; justify-content:center;
+    font-size:15px;
+  }
+
+  /* ===== 카드 ===== */
+  .card-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:12px; }
+  .choice-card{
+    background:var(--card); border:3px solid #f0ecf7; border-radius:18px;
+    padding:16px 12px; font-size:18px; font-weight:700; color:var(--ink);
+    box-shadow:var(--shadow-soft); transition:transform .12s, border-color .2s, background .2s;
+    text-align:center;
+  }
+  .choice-card:hover{ transform:translateY(-3px); }
+  .choice-card.selected{
+    border-color:var(--pink-deep); background:var(--pink);
+  }
+  .card-group-title{ font-weight:800; color:var(--ink-soft); margin:16px 0 8px; font-size:17px; }
+
+  /* ===== 문장 편집 영역 ===== */
+  .sentence-box{
+    background:#fffdf5; border:3px dashed var(--yellow-deep); border-radius:18px;
+    padding:16px; margin-top:8px;
+  }
+  .sentence-box textarea{
+    width:100%; border:none; background:transparent; resize:vertical;
+    font-family:inherit; font-size:22px; line-height:1.6; color:var(--ink);
+    min-height:84px; outline:none; font-weight:600;
+  }
+  .cover-input{
+    width:100%; padding:14px 16px; font-size:22px; font-family:inherit; font-weight:700;
+    border:3px solid #f0ecf7; border-radius:16px; margin-bottom:6px; color:var(--ink);
+    background:#fff; outline:none;
+  }
+  .cover-input:focus{ border-color:var(--blue-deep); }
+  .input-label{ font-weight:800; margin:14px 0 6px; font-size:17px; }
+
+  .feedback{
+    display:flex; align-items:center; gap:8px; margin-top:12px;
+    color:var(--green-deep); font-weight:800; font-size:18px;
+    background:var(--green); padding:8px 14px; border-radius:14px;
+  }
+
+  /* ===== 예시 뱅크 ===== */
+  .example-bank{ margin-top:8px; }
+  .example-chip{
+    display:block; width:100%; text-align:left; background:#fff;
+    border:2px solid var(--blue); border-radius:14px; padding:12px 14px;
+    font-size:17px; margin-bottom:10px; color:var(--ink); font-weight:600;
+    box-shadow:var(--shadow-soft); transition:transform .1s, background .2s;
+  }
+  .example-chip:hover{ background:var(--blue); transform:translateX(3px); }
+  .example-chip .pick{ color:var(--blue-deep); font-weight:800; font-size:14px; }
+
+  .btn{
+    border:none; border-radius:16px; padding:12px 20px; font-weight:800; font-size:17px;
+    box-shadow:var(--shadow-soft); transition:transform .1s, filter .2s;
+  }
+  .btn:hover{ transform:translateY(-2px); }
+  .btn:active{ transform:translateY(0); }
+  .btn-more{ background:var(--yellow); color:#8a6d00; }
+  .btn-ghost{ background:#fff; color:var(--ink); border:2px solid #eee; }
+
+  /* ===== 스티커/그림 영역 ===== */
+  .sticker-palette{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+  .sticker-btn{
+    font-size:26px; background:#fff; border:2px solid #f0ecf7; border-radius:14px;
+    width:52px; height:52px; line-height:1; box-shadow:var(--shadow-soft);
+    transition:transform .1s;
+  }
+  .sticker-btn:hover{ transform:scale(1.12); }
+  .draw-area{
+    margin-top:12px; min-height:150px; border:3px dashed var(--purple-deep);
+    border-radius:18px; background:repeating-linear-gradient(45deg,#faf7ff,#faf7ff 12px,#f4eeff 12px,#f4eeff 24px);
+    display:flex; flex-wrap:wrap; align-items:center; justify-content:center;
+    gap:6px; padding:14px; position:relative;
+  }
+  .draw-placeholder{ color:var(--ink-soft); font-weight:700; font-size:16px; }
+  .placed-sticker{
+    font-size:40px; background:transparent; border:none; padding:2px;
+    transition:transform .1s;
+  }
+  .placed-sticker:hover{ transform:scale(1.2) rotate(-6deg); }
+
+  /* ===== 하단 네비 ===== */
+  .nav-bar{
+    position:fixed; bottom:0; left:0; right:0; z-index:20;
+    background:rgba(255,255,255,.92); backdrop-filter:blur(8px);
+    border-top:3px solid var(--blue);
+    display:flex; gap:12px; justify-content:space-between;
+    max-width:760px; margin:0 auto; padding:14px 16px;
+    left:50%; transform:translateX(-50%);
+  }
+  .nav-btn{
+    flex:1; border:none; border-radius:18px; padding:16px; font-size:19px; font-weight:800;
+    box-shadow:var(--shadow-soft); transition:transform .1s, filter .2s;
+  }
+  .nav-btn:hover{ transform:translateY(-2px); }
+  .nav-prev{ background:#fff; color:var(--ink-soft); border:2px solid #eee; max-width:150px; }
+  .nav-next{ background:var(--pink-deep); color:#fff; }
+  .nav-next.finish{ background:var(--green-deep); }
+  .nav-btn:disabled{ opacity:.4; cursor:not-allowed; transform:none; }
+
+  /* ===== 미리보기(책) ===== */
+  .book-intro{ text-align:center; margin-bottom:8px; }
+  .book{ display:flex; flex-direction:column; gap:22px; }
+  .book-page{
+    background:#fff; border-radius:20px; box-shadow:var(--shadow);
+    padding:26px; border:4px solid var(--pink); position:relative;
+    min-height:280px; display:flex; flex-direction:column;
+  }
+  .book-page .pg-num{
+    position:absolute; top:12px; right:16px; color:var(--ink-soft);
+    font-weight:800; font-size:14px; background:var(--yellow); padding:3px 10px; border-radius:99px;
+  }
+  .book-page .pg-badge{ font-weight:800; color:var(--purple-deep); font-size:15px; margin-bottom:4px; }
+  .book-page.cover-page{ border-color:var(--blue-deep); background:linear-gradient(160deg,#fff,#eef6ff); text-align:center; justify-content:center; align-items:center; }
+  .book-page.cover-page .cover-title{ font-size:34px; font-weight:900; line-height:1.3; margin:10px 0; }
+  .book-page.cover-page .cover-author{ font-size:20px; color:var(--ink-soft); font-weight:700; }
+  .book-page .pg-text{ font-size:22px; line-height:1.7; font-weight:600; flex:1; }
+  .book-page .pg-stickers{ font-size:34px; margin-top:14px; letter-spacing:4px; }
+  .book-page.back-page{ border-color:var(--green-deep); background:linear-gradient(160deg,#fff,#eefff5); }
+
+  .print-tip{ text-align:center; color:var(--ink-soft); font-size:15px; margin-top:6px; }
+
+  /* ===== 인쇄 ===== */
+  @media print{
+    .app-header, .nav-bar, .no-print{ display:none !important; }
+    body{ background:#fff; }
+    main{ padding:0; max-width:none; }
+    .book{ gap:0; }
+    .book-page{
+      box-shadow:none; border:2px solid #ccc; border-radius:0;
+      page-break-after:always; break-after:page;
+      min-height:92vh; margin:0;
+    }
+    .book-page:last-child{ page-break-after:auto; }
+  }
+
+  @media (max-width:520px){
+    .question{ font-size:22px; }
+    .card-grid{ grid-template-columns:repeat(auto-fill,minmax(100px,1fr)); }
+  }
+</style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-title"><span class="emoji">📖</span> 나만의 스토리북 만들기 <span class="emoji">✏️</span></div>
+    <div class="progress-wrap">
+      <div class="progress-bar" id="progressBar"></div>
+      <div class="progress-label" id="progressLabel"></div>
+    </div>
+  </header>
+
+  <main id="app"></main>
+
+  <nav class="nav-bar no-print">
+    <button class="nav-btn nav-prev" id="prevBtn">◀ 이전</button>
+    <button class="nav-btn nav-next" id="nextBtn">다음 ▶</button>
+  </nav>
+
+<script>
+/* =========================================================
+   나만의 스토리북 — 단일 파일 웹앱 (오프라인 / 저장소 미사용)
+   모든 상태는 자바스크립트 메모리(state)로만 관리합니다.
+   ========================================================= */
+
+/* ---------- 한국어 조사 도우미 ---------- */
+function hasJong(word){
+  if(!word) return false;
+  const c = word.charCodeAt(word.length-1);
+  if(c < 0xAC00 || c > 0xD7A3) return false;      // 한글 음절이 아니면 받침 없음 처리
+  return (c - 0xAC00) % 28 !== 0;
+}
+function josa(word, type){
+  const pair = { eul:['을','를'], eun:['은','는'], iga:['이','가'], gwa:['과','와'] }[type];
+  return hasJong(word) ? pair[0] : pair[1];
+}
+function slot(v){ return v || '＿＿＿'; }
+
+/* ---------- 페이지 설정 ---------- */
+const STICKERS_COMMON = ['⭐','🌈','💖','✨','🎈','🌟'];
+
+const PAGES = [
+  /* 0. 표지 */
+  {
+    id:'cover', badge:'표지 · Cover',
+    question:'너의 이야기 제목을 정해 볼까요?',
+    hint:'멋진 제목과 주인공(나) 이름을 적어 주세요.',
+    cover:true,
+    titleKeywords:['용감한 하루','사라진 강아지','비밀 친구','마법 연필','수요일 대모험','신기한 수수께끼'],
+    examples:[
+      '민준이의 용감한 하루',
+      '지우와 사라진 강아지',
+      '나는 마법 연필을 주웠어요',
+      '서연이의 비밀 친구',
+      '하준이의 수요일 대모험',
+    ],
+    stickers:['📖','✨','🌈','⭐','🎀','🏰'],
+  },
+  /* 1. 기 */
+  {
+    id:'intro', badge:'기(起) · 나 소개하기',
+    question:"주인공인 '나'는 어떤 사람인가요?",
+    hint:'좋아하는 것과 성격을 골라 보세요.',
+    slots:[
+      { key:'like', title:'좋아하는 것을 골라요', options:['그림','축구','게임','책','강아지','노래','요리'] },
+      { key:'trait', title:'나의 성격을 골라요', options:['용감한','조용한','장난꾸러기','호기심 많은','다정한'] },
+    ],
+    frame:(s)=>`나는 ${slot(s.like)}${s.like?josa(s.like,'eul'):'을(를)'} 좋아하는 ${slot(s.trait)} 어린이예요.`,
+    examples:[
+      '나는 강아지를 좋아하는 호기심 많은 어린이예요.',
+      '나는 축구를 제일 좋아하고, 조금 부끄러움이 많아요.',
+      '나는 그림 그리기를 좋아하는 조용한 아이예요.',
+      '나는 장난을 좋아하지만 마음은 아주 따뜻해요.',
+      '나는 책 읽기를 좋아하는 씩씩한 어린이예요.',
+    ],
+    stickers:['😀','🎨','⚽','🎮','📚','🐶','🎵','🍳'],
+  },
+  /* 2. 승① */
+  {
+    id:'rising1', badge:'승(承) ① · 사건이 시작돼요',
+    question:'평범한 어느 날, 무슨 특별한 일이 생겼나요?',
+    hint:'이야기의 씨앗이 되는 사건을 골라 보세요.',
+    slots:[
+      { key:'seed', title:'특별한 사건을 골라요', options:[
+        '이상한 물건을 주웠어요','새 친구를 만났어요','소중한 것이 사라졌어요','비밀 문을 발견했어요','이상한 편지를 받았어요' ] },
+    ],
+    frame:(s)=>`그러던 어느 날, ${slot(s.seed)}`,
+    examples:[
+      '그러던 어느 날, 길에서 반짝이는 열쇠를 주웠어요.',
+      '그러던 어느 날, 내 강아지가 갑자기 사라졌어요.',
+      '그러던 어느 날, 교실 벽에서 작은 문을 발견했어요.',
+      '그러던 어느 날, 이름이 없는 편지가 도착했어요.',
+      '그러던 어느 날, 전학 온 친구가 나에게 말을 걸었어요.',
+    ],
+    stickers:['🔑','🐕','🚪','✉️','👀','✨'],
+  },
+  /* 3. 승② */
+  {
+    id:'rising2', badge:'승(承) ② · 모험이 커져요',
+    question:"그래서 '나'는 무엇을 하기로 했나요?",
+    hint:'내가 하기로 결심한 일을 골라 보세요.',
+    slots:[
+      { key:'action', title:'내가 하기로 한 일을 골라요', options:[
+        '찾아보기로','도와주기로','몰래 따라가기로','친구에게 말하기로','용기를 내기로' ] },
+    ],
+    frame:(s)=>`나는 ${slot(s.action)} 마음먹었어요.`,
+    examples:[
+      '나는 그 열쇠가 어디에 맞는지 찾아보기로 했어요.',
+      '나는 사라진 강아지를 꼭 찾기로 마음먹었어요.',
+      '나는 그 문 뒤에 무엇이 있는지 보기로 했어요.',
+      '나는 편지를 보낸 사람을 알아내기로 했어요.',
+      '나는 새 친구를 도와주기로 결심했어요.',
+    ],
+    stickers:['🔍','🗺️','👣','🗣️','💪','🌟'],
+  },
+  /* 4. 전① */
+  {
+    id:'turn1', badge:'전(轉) ① · 가장 큰 어려움',
+    question:'가장 힘들고 무서웠던 순간은 언제였나요?',
+    hint:'무슨 일이 있었는지, 어떤 기분이었는지 골라 보세요.',
+    slots:[
+      { key:'event', title:'무슨 일이 생겼나요?', options:[
+        '갑자기 불이 꺼졌어요','길을 잃어버렸어요','아무도 믿어주지 않았어요','시간이 얼마 없었어요','큰 문제가 나타났어요' ] },
+      { key:'feeling', title:'그때 기분은 어땠나요?', options:[
+        '무서웠어요','떨렸어요','포기하고 싶었어요','속상했어요','막막했어요' ] },
+    ],
+    frame:(s)=>`그런데 ${slot(s.event)}. 나는 정말 ${slot(s.feeling)}`,
+    examples:[
+      '그런데 갑자기 불이 꺼졌어요. 나는 정말 무서웠어요.',
+      '그런데 길을 잃어버렸어요. 나는 포기하고 싶었어요.',
+      '그런데 아무도 나를 믿어주지 않았어요. 정말 속상했어요.',
+      '그런데 시간이 얼마 남지 않았어요. 나는 마음이 급했어요.',
+      '그런데 큰 문제가 나타났어요. 나는 어떻게 해야 할지 막막했어요.',
+    ],
+    stickers:['😨','😰','😢','⏰','❓','🌑'],
+  },
+  /* 5. 전② */
+  {
+    id:'turn2', badge:'전(轉) ② · 결정의 순간',
+    question:"그때 '나'는 어떤 용기를 냈나요?",
+    hint:'용기를 낸 행동과 그 다음 일을 골라 보세요.',
+    slots:[
+      { key:'courage', title:'어떤 용기를 냈나요?', options:[
+        '눈을 꼭 감고 도전했어요','친구에게 도움을 청했어요','깊게 숨을 쉬고 나아갔어요','포기하지 않았어요','용기를 내서 말했어요' ] },
+      { key:'then', title:'그리고 어떻게 됐나요?', options:[
+        '앞으로 나아갔어요','함께 힘을 냈어요','다시 도전했어요','끝까지 해냈어요','마음이 편해졌어요' ] },
+    ],
+    frame:(s)=>`나는 ${slot(s.courage)}. 그리고 ${slot(s.then)}`,
+    examples:[
+      '나는 눈을 꼭 감고 문을 열었어요. 그리고 앞으로 나아갔어요.',
+      '나는 친구에게 도와달라고 말했어요. 그리고 함께 힘을 냈어요.',
+      '나는 깊게 숨을 쉬었어요. 그리고 다시 도전했어요.',
+      '나는 무섭지만 포기하지 않았어요. 그리고 끝까지 해냈어요.',
+      '나는 용기를 내서 큰 소리로 말했어요. 그리고 마음이 편해졌어요.',
+    ],
+    stickers:['😤','🙏','🔥','🌟','💪','😮‍💨'],
+  },
+  /* 6. 결 */
+  {
+    id:'resolution', badge:'결(結) · 해결과 성장',
+    question:'결국 어떻게 되었고, 무엇을 배웠나요?',
+    hint:'이야기의 결말과 내가 배운 점을 골라 보세요.',
+    slots:[
+      { key:'result', title:'결국 어떻게 되었나요?', options:[
+        '사라진 강아지를 다시 만났어요','비밀의 수수께끼를 풀었어요','새 친구와 친해졌어요','문제를 모두 해결했어요','편지의 주인을 찾았어요' ] },
+      { key:'lesson', title:'무엇을 배웠나요?', options:[
+        '포기하지 않는 마음','용기의 소중함','먼저 다가가는 용기','함께하는 힘','끝까지 노력하는 마음' ] },
+    ],
+    frame:(s)=>`마침내 ${slot(s.result)}. 나는 ${slot(s.lesson)}${s.lesson?josa(s.lesson,'eul'):'을(를)'} 알게 되었어요.`,
+    examples:[
+      '마침내 사라진 강아지를 다시 만났어요. 나는 포기하지 않는 게 중요하다는 걸 알게 되었어요.',
+      '마침내 비밀 문의 수수께끼를 풀었어요. 나는 용기를 내면 할 수 있다는 걸 알게 되었어요.',
+      '마침내 새 친구와 가장 친한 사이가 되었어요. 나는 먼저 다가가는 게 멋진 일이라는 걸 배웠어요.',
+      '마침내 문제를 모두 해결했어요. 나는 혼자보다 함께가 더 강하다는 걸 알게 되었어요.',
+      '마침내 편지의 주인을 찾았어요. 나는 끝까지 노력하면 답을 찾는다는 걸 배웠어요.',
+    ],
+    stickers:['🎉','🏆','🤝','💡','🌈','⭐'],
+  },
+  /* 7. 백면 */
+  {
+    id:'back', badge:'백면 · 작가의 말',
+    question:'이 책을 읽는 친구에게 한마디 남겨 볼까요?',
+    hint:'읽어 줄 친구에게 전하고 싶은 말을 골라 보세요.',
+    slots:[
+      { key:'message', title:'전하고 싶은 말을 골라요', options:[
+        '여러분도 용기를 내면 무엇이든 할 수 있어요!',
+        '포기하지 않는 마음이 가장 중요해요.',
+        '이 책을 읽어줘서 정말 고마워요!',
+        '여러분의 이야기도 꼭 만들어 보세요.',
+        '우리 모두는 각자 특별한 주인공이에요.' ] },
+    ],
+    frame:(s)=>`이 이야기를 쓴 작가는 ${state.cover.name || '＿＿＿'}이에요. ${slot(s.message)}`,
+    examples:[
+      '여러분도 용기를 내면 무엇이든 할 수 있어요!',
+      '포기하지 않는 마음이 가장 중요해요.',
+      '이 책을 읽어줘서 정말 고마워요!',
+      '여러분의 이야기도 꼭 만들어 보세요.',
+      '우리 모두는 각자 특별한 주인공이에요.',
+    ],
+    stickers:['👋','💌','📗','😊','🌟','💖'],
+  },
+];
+
+const TOTAL = PAGES.length;         // 8
+const PREVIEW_STEP = TOTAL;         // 미리보기 단계 index = 8
+
+/* ---------- 상태 ---------- */
+const state = {
+  step: 0,
+  cover:{ title:'', name:'' },
+  // 각 페이지: { slots:{}, text:'', edited:false, exStart:0, stickers:[] }
+  pages: PAGES.map(()=>({ slots:{}, text:'', edited:false, exStart:0, stickers:[] })),
+};
+
+/* ---------- 문장 생성 ---------- */
+function currentText(pi){
+  const p = PAGES[pi], ps = state.pages[pi];
+  if(ps.edited && ps.text) return ps.text;
+  if(p.frame){
+    const built = p.frame(ps.slots);
+    return ps.text || built;
+  }
+  return ps.text;
+}
+function isDone(pi){
+  const p = PAGES[pi], ps = state.pages[pi];
+  if(p.cover) return state.cover.title.trim() && state.cover.name.trim();
+  const t = (currentText(pi)||'');
+  return t.trim() && !t.includes('＿＿＿');
+}
+
+/* ---------- 렌더 ---------- */
+const app = document.getElementById('app');
+
+function render(){
+  renderProgress();
+  if(state.step === PREVIEW_STEP){ renderPreview(); }
+  else{ renderStep(state.step); }
+  renderNav();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function renderProgress(){
+  const bar = document.getElementById('progressBar');
+  bar.innerHTML='';
+  for(let i=0;i<TOTAL;i++){
+    const d = document.createElement('div');
+    d.className = 'step-dot' + (i<state.step?' done':'') + (i===state.step?' current':'');
+    bar.appendChild(d);
+  }
+  const label = document.getElementById('progressLabel');
+  if(state.step===PREVIEW_STEP){ label.textContent='📚 완성! 미리보기'; }
+  else{ label.textContent = `${state.step+1} / ${TOTAL} 쪽`; }
+}
+
+function el(html){ const t=document.createElement('template'); t.innerHTML=html.trim(); return t.content.firstChild; }
+
+function renderStep(pi){
+  const p = PAGES[pi], ps = state.pages[pi];
+  app.innerHTML='';
+
+  app.appendChild(el(`<div class="step-badge">${p.badge}</div>`));
+  app.appendChild(el(`<h2 class="question">${p.question}</h2>`));
+  app.appendChild(el(`<p class="hint">${p.hint}</p>`));
+
+  if(p.cover){ renderCover(p, ps); }
+  else{ renderStandard(pi, p, ps); }
+}
+
+/* ----- 표지 페이지 ----- */
+function renderCover(p, ps){
+  const wrap = el(`<div></div>`);
+
+  wrap.appendChild(el(`<div class="input-label">✏️ 이야기 제목</div>`));
+  const titleIn = el(`<input class="cover-input" placeholder="예) 민준이의 용감한 하루" />`);
+  titleIn.value = state.cover.title;
+  titleIn.addEventListener('input', e=>{ state.cover.title = e.target.value; refreshFeedbackAndNav(); });
+  wrap.appendChild(titleIn);
+
+  wrap.appendChild(el(`<div class="input-label">🙋 주인공(나) 이름</div>`));
+  const nameIn = el(`<input class="cover-input" placeholder="예) 민준" />`);
+  nameIn.value = state.cover.name;
+  nameIn.addEventListener('input', e=>{ state.cover.name = e.target.value; refreshFeedbackAndNav(); });
+  wrap.appendChild(nameIn);
+
+  // 제목 도우미
+  wrap.appendChild(el(`<div class="section-label"><span class="num">＋</span> 제목 도우미 — 눌러서 만들어요</div>`));
+  const helper = el(`<div class="card-grid"></div>`);
+  p.titleKeywords.forEach(kw=>{
+    const c = el(`<button class="choice-card">${kw}</button>`);
+    c.addEventListener('click', ()=>{
+      const nm = state.cover.name.trim() || '나';
+      state.cover.title = `${nm}의 ${kw}`;
+      titleIn.value = state.cover.title;
+      refreshFeedbackAndNav();
+    });
+    helper.appendChild(c);
+  });
+  wrap.appendChild(helper);
+
+  // 예시 제목 뱅크
+  wrap.appendChild(el(`<div class="section-label"><span class="num">💡</span> 예시 제목 — 마음에 들면 골라요</div>`));
+  const bank = el(`<div class="example-bank"></div>`);
+  p.examples.forEach(ex=>{
+    const chip = el(`<button class="example-chip">${ex} <span class="pick">← 고르기</span></button>`);
+    chip.addEventListener('click', ()=>{ state.cover.title = ex; titleIn.value = ex; refreshFeedbackAndNav(); });
+    bank.appendChild(chip);
+  });
+  wrap.appendChild(bank);
+
+  app.appendChild(wrap);
+  renderStickerArea(p, ps, wrap);
+  renderFeedback(0);
+}
+
+/* ----- 일반 페이지 (카드 → 문장 → 예시) ----- */
+function renderStandard(pi, p, ps){
+  const wrap = el(`<div></div>`);
+
+  // ① 선택 카드
+  wrap.appendChild(el(`<div class="section-label"><span class="num">1</span> 카드를 골라요</div>`));
+  p.slots.forEach(sl=>{
+    if(p.slots.length>1 || sl.title){
+      wrap.appendChild(el(`<div class="card-group-title">${sl.title}</div>`));
+    }
+    const grid = el(`<div class="card-grid"></div>`);
+    sl.options.forEach(opt=>{
+      const sel = ps.slots[sl.key]===opt;
+      const c = el(`<button class="choice-card${sel?' selected':''}">${opt}</button>`);
+      c.addEventListener('click', ()=>{
+        ps.slots[sl.key] = (ps.slots[sl.key]===opt) ? '' : opt;  // 다시 누르면 해제
+        ps.edited = false;                 // 카드 선택 시 문장 자동 재조립
+        ps.text = p.frame(ps.slots);
+        renderStep(pi);
+      });
+      grid.appendChild(c);
+    });
+    wrap.appendChild(grid);
+  });
+
+  // ② 문장 틀(빈칸) → 편집 영역
+  wrap.appendChild(el(`<div class="section-label"><span class="num">2</span> 문장을 다듬어요 (직접 고쳐도 좋아요)</div>`));
+  const box = el(`<div class="sentence-box"></div>`);
+  const ta = el(`<textarea placeholder="카드를 고르거나 예시를 눌러 보세요."></textarea>`);
+  ta.value = currentText(pi);
+  ta.addEventListener('input', e=>{
+    ps.text = e.target.value; ps.edited = true;
+    refreshFeedbackAndNav();
+  });
+  box.appendChild(ta);
+  wrap.appendChild(box);
+
+  // ③ 예시 뱅크 + 예시 더 보기
+  wrap.appendChild(el(`<div class="section-label"><span class="num">3</span> 예시에서 고르기</div>`));
+  const bank = el(`<div class="example-bank"></div>`);
+  renderExamples(pi, bank, ta);
+  wrap.appendChild(bank);
+
+  const moreBtn = el(`<button class="btn btn-more no-print">🔄 예시 더 보기</button>`);
+  moreBtn.addEventListener('click', ()=>{
+    ps.exStart = (ps.exStart + 3) % p.examples.length;
+    renderExamples(pi, bank, ta);
+  });
+  wrap.appendChild(moreBtn);
+
+  app.appendChild(wrap);
+  renderStickerArea(p, ps, wrap);
+  renderFeedback(pi);
+}
+
+function renderExamples(pi, bank, ta){
+  const p = PAGES[pi], ps = state.pages[pi];
+  bank.innerHTML='';
+  const n = Math.min(3, p.examples.length);
+  for(let k=0;k<n;k++){
+    const ex = p.examples[(ps.exStart + k) % p.examples.length];
+    const chip = el(`<button class="example-chip">${ex} <span class="pick">← 고르기</span></button>`);
+    chip.addEventListener('click', ()=>{
+      ps.text = ex; ps.edited = true;
+      ta.value = ex;
+      refreshFeedbackAndNav();
+    });
+    bank.appendChild(chip);
+  }
+}
+
+/* ----- 스티커 / 그림 영역 ----- */
+function renderStickerArea(p, ps, wrap){
+  wrap.appendChild(el(`<div class="section-label no-print"><span class="num">🎨</span> 스티커를 붙이거나, 인쇄해서 그림을 그려요</div>`));
+  const palette = el(`<div class="sticker-palette no-print"></div>`);
+  [...p.stickers, ...STICKERS_COMMON].forEach(em=>{
+    const b = el(`<button class="sticker-btn">${em}</button>`);
+    b.addEventListener('click', ()=>{ ps.stickers.push(em); drawStickers(); });
+    palette.appendChild(b);
+  });
+  wrap.appendChild(palette);
+
+  const draw = el(`<div class="draw-area" id="drawArea"></div>`);
+  wrap.appendChild(draw);
+
+  function drawStickers(){
+    draw.innerHTML='';
+    if(ps.stickers.length===0){
+      draw.appendChild(el(`<div class="draw-placeholder">여기에 그림을 그릴 거예요 🎨<br/>(위 스티커를 눌러 붙이거나, 인쇄 후 손으로 그려요)</div>`));
+    }else{
+      ps.stickers.forEach((em,idx)=>{
+        const s = el(`<button class="placed-sticker no-print" title="누르면 지워져요">${em}</button>`);
+        s.addEventListener('click', ()=>{ ps.stickers.splice(idx,1); drawStickers(); });
+        draw.appendChild(s);
+      });
+    }
+  }
+  drawStickers();
+}
+
+/* ----- 피드백(잘했어요) ----- */
+function renderFeedback(pi){
+  const old = document.getElementById('fbSlot'); if(old) old.remove();
+  const slotDiv = el(`<div id="fbSlot"></div>`);
+  if(isDone(pi)){
+    slotDiv.appendChild(el(`<div class="feedback">✓ 잘했어요! 멋진 문장이 완성됐어요.</div>`));
+  }
+  app.appendChild(slotDiv);
+}
+
+function refreshFeedbackAndNav(){
+  renderFeedback(state.step);
+  renderNav();
+  renderProgress();
+}
+
+/* ---------- 미리보기(책) ---------- */
+function renderPreview(){
+  app.innerHTML='';
+  app.appendChild(el(`<div class="book-intro no-print">
+    <div class="step-badge">📚 완성!</div>
+    <h2 class="question">나만의 스토리북이 완성됐어요!</h2>
+    <p class="hint">아래에서 8쪽을 확인하고, <b>인쇄 버튼</b>으로 책으로 만들 수 있어요.</p>
+    <button class="btn btn-more" id="printBtn" style="font-size:20px;padding:16px 28px;">🖨️ 인쇄하기 (PDF로 저장)</button>
+    <div class="print-tip">인쇄 창에서 '대상'을 <b>PDF로 저장</b>으로 고르면 파일로 보관할 수 있어요.</div>
+  </div>`));
+
+  const book = el(`<div class="book"></div>`);
+
+  // 표지
+  book.appendChild(el(`<div class="book-page cover-page">
+    <div class="pg-num">1 / 8</div>
+    <div style="font-size:40px">📖</div>
+    <div class="cover-title">${escapeHtml(state.cover.title) || '＿＿＿'}</div>
+    <div class="cover-author">글·그림 · ${escapeHtml(state.cover.name)||'＿＿＿'}</div>
+    <div class="pg-stickers">${(state.pages[0].stickers||[]).join(' ')}</div>
+  </div>`));
+
+  // 내용 페이지 1~6 (index 1..6)
+  for(let i=1;i<=6;i++){
+    const p = PAGES[i];
+    book.appendChild(el(`<div class="book-page">
+      <div class="pg-num">${i+1} / 8</div>
+      <div class="pg-badge">${p.badge}</div>
+      <div class="pg-text">${escapeHtml(currentText(i)) || '＿＿＿'}</div>
+      <div class="pg-stickers">${(state.pages[i].stickers||[]).join(' ')}</div>
+    </div>`));
+  }
+
+  // 백면 (index 7)
+  const bp = PAGES[7];
+  book.appendChild(el(`<div class="book-page back-page">
+    <div class="pg-num">8 / 8</div>
+    <div class="pg-badge">${bp.badge}</div>
+    <div class="pg-text">${escapeHtml(currentText(7)) || '＿＿＿'}</div>
+    <div class="pg-stickers">${(state.pages[7].stickers||[]).join(' ')}</div>
+  </div>`));
+
+  app.appendChild(book);
+  document.getElementById('printBtn').addEventListener('click', ()=>window.print());
+}
+
+function escapeHtml(s){
+  return (s||'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+
+/* ---------- 네비게이션 ---------- */
+function renderNav(){
+  const prev = document.getElementById('prevBtn');
+  const next = document.getElementById('nextBtn');
+
+  prev.disabled = state.step===0;
+
+  if(state.step===PREVIEW_STEP){
+    next.style.display='none';
+    prev.textContent='◀ 다시 고치기';
+  }else{
+    next.style.display='';
+    const last = state.step===TOTAL-1;
+    next.textContent = last ? '완성! 책 보기 📚' : '다음 ▶';
+    next.className = 'nav-btn nav-next' + (last?' finish':'');
+    prev.textContent='◀ 이전';
+  }
+}
+
+document.getElementById('prevBtn').addEventListener('click', ()=>{
+  if(state.step>0){ state.step--; render(); }
+});
+document.getElementById('nextBtn').addEventListener('click', ()=>{
+  if(state.step<PREVIEW_STEP){ state.step++; render(); }
+});
+
+/* ---------- 시작 ---------- */
+render();
+</script>
+</body>
+</html>
