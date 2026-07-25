@@ -17,15 +17,22 @@ def analyze(val: dict) -> dict:
     if not is_loss and val.get("peg") is not None:
         method += " + PEG (성장주)"
 
-    sector_pct = val.get("sector_per_pct", 50)
-    hist_pct = val.get("hist_per_pct", 50)
+    # 백분위가 없으면(정보 부족) 50으로 중립 취급하되 표시는 '—'.
+    sector_pct = val.get("sector_per_pct")
+    hist_pct = val.get("hist_per_pct")
+    s_pct = 50 if sector_pct is None else sector_pct
+    h_pct = 50 if hist_pct is None else hist_pct
 
-    # 저평가 여부: 상대·역사적 백분위가 모두 낮으면 '싸다'
-    cheap = sector_pct <= 30 and hist_pct <= 35
-    expensive = sector_pct >= 70 or (val.get("pbr", 0) >= 5)
+    pbr = val.get("pbr") or 0
+    # 저평가 여부: 상대·역사적 백분위가 모두 낮으면 '싸다' (적자기업엔 PER 논리 미적용)
+    cheap = (not is_loss) and s_pct <= 30 and h_pct <= 35
+    expensive = (not is_loss) and (s_pct >= 70 or pbr >= 5)
 
     # 밸류트랩 검증: 싸 보이지만 실적 악화면 경고 (원칙: 저평가면 '싼 이유' 검증)
     trap = cheap and val.get("earnings_declining", False)
+
+    def pctxt(p):
+        return "—" if p is None else f"{p}%"
 
     metrics = dict(val)
     metrics["method"] = method
@@ -36,21 +43,26 @@ def analyze(val: dict) -> dict:
     }
 
     badges: list[dict] = []
-    if trap:
+    per_pbr = f"PER {val.get('per') if val.get('per') is not None else '적자·N/A'} · PBR {val.get('pbr') or '—'}"
+    if is_loss:
+        badges.append(badge("적자 — 밸류 판단 보류",
+                            f"{per_pbr} · PER 무의미, PSR/EV·Sales 필요", "중",
+                            "흑자 전환·매출 성장 확인 시 재평가"))
+    elif trap:
         badges.append(badge("싸지만 이유 있음",
-                            f"PER {val.get('per')} · PBR {val.get('pbr')} (밸류트랩 의심)", "중",
+                            f"{per_pbr} (밸류트랩 의심)", "중",
                             "업황 반등·구조조정 성공 시 진짜 저평가일 수 있음"))
     elif cheap:
         badges.append(badge("지금 싼 편",
-                            f"업종 PER 백분위 {sector_pct}% · 역사적 밴드 {hist_pct}%", "중",
+                            f"상대 PER 백분위 {pctxt(sector_pct)} · 역사적 밴드 {pctxt(hist_pct)}", "중",
                             "싼 데는 이유가 있을 수 있으니 실적 추세 재확인"))
     elif expensive:
         badges.append(badge("비싼 편, 조심",
-                            f"업종 PER 백분위 {sector_pct}% · PBR {val.get('pbr')}배", "중",
+                            f"상대 PER 백분위 {pctxt(sector_pct)} · PBR {val.get('pbr') or '—'}배", "중",
                             "고성장 지속 시 고평가가 유지될 수 있음"))
     else:
         badges.append(badge("적정 수준",
-                            f"업종 PER 백분위 {sector_pct}% · 역사적 밴드 {hist_pct}%", "중",
+                            f"상대 PER 백분위 {pctxt(sector_pct)} · 역사적 밴드 {pctxt(hist_pct)}", "중",
                             "사이클 top에서 PER이 낮아 보이는 착시 주의"))
 
     peg = val.get("peg")

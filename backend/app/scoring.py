@@ -24,8 +24,9 @@ def _chart_bias(tech: dict) -> int:
 
 
 def _fundamental_bias(growth: dict, stability: dict, valuation: dict) -> int:
-    """펀더멘탈 신호를 -2~+2 로 요약."""
-    g, s = growth["score"], stability["score"]
+    """펀더멘탈 신호를 -2~+2 로 요약. 점수 None(정보 부족)은 중립(50)으로 취급."""
+    g = growth["score"] if growth.get("score") is not None else 50
+    s = stability["score"] if stability.get("score") is not None else 50
     bucket = valuation.get("bucket", "적정가격")
     base = (g + s) / 100 - 1.0            # 0~2 → -1~+1 근처
     val_adj = {"저평가": 0.6, "적정가격": 0.0, "고평가": -0.6,
@@ -50,7 +51,10 @@ def verdict(tech, flow, growth, stability, valuation) -> dict:
         signal, label, emoji = "neutral", "중립", "🟡"
 
     risk_grade, risk_label = annualized_risk_grade(tech["metrics"]["sigma"])
-    combo = combo_label(growth["score"], stability["score"], valuation["bucket"])
+    fundamentals_known = growth.get("score") is not None and stability.get("score") is not None
+    combo = combo_label(growth.get("score") or 50, stability.get("score") or 50, valuation["bucket"])
+    if not fundamentals_known:
+        combo += " · 재무 정보 부족"
 
     # 차트와 펀더멘탈이 반대 방향이면 충돌 표시 (원칙: 양쪽 표시, 판단은 사용자)
     conflict_exists = (chart >= 1 and fund <= -1) or (chart <= -1 and fund >= 1)
@@ -59,7 +63,14 @@ def verdict(tech, flow, growth, stability, valuation) -> dict:
     else:
         note = "차트·수급·펀더멘탈이 대체로 같은 방향."
 
-    confidence = "상" if abs(total) >= 3 and not conflict_exists else "중" if abs(total) >= 1 else "하"
+    if abs(total) >= 3 and not conflict_exists and fundamentals_known:
+        confidence = "상"
+    elif abs(total) >= 1:
+        confidence = "중"
+    else:
+        confidence = "하"
+    if not fundamentals_known and confidence == "상":
+        confidence = "중"
 
     return {
         "signal": signal, "signal_label": label, "signal_emoji": emoji,

@@ -15,10 +15,16 @@
       <div class="tag">감정적 매매를 줄여주는 <b>판단 보조</b> 대시보드 · 투자 자문 아님</div>
     </header>
 
-    <div class="demo-banner">
+    <div class="mode-row">
+      <span id="mode" class="mode-badge">모드 확인 중…</span>
+      <button id="conn" class="mode-btn">백엔드 연결</button>
+    </div>
+
+    <div id="banner" class="demo-banner">
       🧪 데모 화면입니다. GitHub Pages는 정적 호스팅이라 실시간 시세 대신
       Python 백엔드가 미리 계산해 둔 <b>샘플 스냅샷</b>을 보여줍니다.
-      실서비스 연결 방법은 저장소 README를 참고하세요.
+      실시간으로 쓰려면 우측 상단 <b>백엔드 연결</b>에 배포한 주소를 넣으세요
+      (배포 방법은 <a href="backend/README.md">backend/README</a>).
     </div>
 
     <div class="searchbar">
@@ -35,6 +41,7 @@
     </main>
   </div>
 
+  <script src="assets/config.js"></script>
   <script src="assets/chart.js"></script>
   <script src="assets/app.js"></script>
 </body>

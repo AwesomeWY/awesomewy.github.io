@@ -16,21 +16,54 @@
   const won = n => (n == null ? "—" : Number(n).toLocaleString() + "원");
   const esc = s => String(s).replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
 
-  // 데모용: 정적 스냅샷. 실서비스에서는 `/api/analyze?code=` 등으로 교체.
-  const API = code => `data/${code}.json`;
   const INDEX = "data/index.json";
+  const base = () => window.HannunConfig.get();          // 배포 백엔드 주소(없으면 데모)
+  const isLive = () => !!base();
+
+  // 실시간 모드에서 보여줄 예시 종목(실제 상장 코드)
+  const LIVE_EXAMPLES = [
+    ["삼성전자", "005930"], ["SK하이닉스", "000660"], ["에코프로비엠", "247540"],
+    ["NAVER", "035420"], ["카카오", "035720"], ["현대차", "005380"],
+  ];
+
+  function updateMode() {
+    const badge = $("#mode");
+    const banner = $("#banner");
+    if (isLive()) {
+      let host = base();
+      try { host = new URL(base()).host; } catch (_) {}
+      badge.textContent = "🟢 실시간 · " + host;
+      badge.className = "mode-badge live";
+      banner.innerHTML =
+        `🟢 <b>실시간 모드</b> — 백엔드(${esc(host)})에서 KRX·DART 데이터를 받아 분석합니다. ` +
+        `기준 시점은 장 마감/공시 기준입니다.`;
+    } else {
+      badge.textContent = "🧪 데모 모드";
+      badge.className = "mode-badge demo";
+      // 데모 배너는 index.html 기본 문구 유지
+    }
+  }
+
+  function renderChips(list) {
+    const chips = $("#chips");
+    chips.innerHTML = "";
+    list.forEach(([name, code]) => {
+      const c = el("button", "chip", `${esc(name)} <span style="opacity:.6">${code}</span>`);
+      c.onclick = () => { $("#q").value = code; analyze(code); };
+      chips.appendChild(c);
+    });
+  }
 
   async function loadIndex() {
+    updateMode();
+    if (isLive()) {
+      renderChips(LIVE_EXAMPLES);
+      analyze(LIVE_EXAMPLES[0][1]);
+      return;
+    }
     try {
-      const res = await fetch(INDEX);
-      const { stocks } = await res.json();
-      const chips = $("#chips");
-      chips.innerHTML = "";
-      stocks.forEach(s => {
-        const c = el("button", "chip", `${esc(s.name)} <span style="opacity:.6">${s.code}</span>`);
-        c.onclick = () => analyze(s.code);
-        chips.appendChild(c);
-      });
+      const { stocks } = await (await fetch(INDEX)).json();
+      renderChips(stocks.map(s => [s.name, s.code]));
       if (stocks[0]) analyze(stocks[0].code);
     } catch (e) {
       $("#result").innerHTML = `<div class="card loading">종목 목록을 불러오지 못했습니다.</div>`;
@@ -41,7 +74,27 @@
     const q = (codeOrName || "").trim();
     if (!q) return;
     $("#result").innerHTML = `<div class="card loading">분석 데이터를 계산해 불러오는 중…</div>`;
-    // 데모: 종목코드(숫자)만 스냅샷이 있음. 종목명이면 index에서 매칭 시도.
+
+    // ---- 실시간 모드: 배포 백엔드 호출 (종목명·코드 모두 지원) ----
+    if (isLive()) {
+      try {
+        const res = await fetch(`${base()}/api/analyze?query=${encodeURIComponent(q)}`);
+        if (!res.ok) {
+          let msg = `요청 실패 (HTTP ${res.status})`;
+          try { msg = (await res.json()).detail || msg; } catch (_) {}
+          throw new Error(msg);
+        }
+        render(await res.json());
+      } catch (e) {
+        $("#result").innerHTML =
+          `<div class="card loading">‘${esc(q)}’ 분석 실패<br>
+           <span style="font-size:13px">${esc(e.message)}</span><br><br>
+           백엔드 주소·상태를 확인하세요. (연결 해제하려면 <b>백엔드 연결</b> → 빈칸 저장)</div>`;
+      }
+      return;
+    }
+
+    // ---- 데모 모드: 정적 스냅샷 (종목명이면 index에서 매칭) ----
     let code = q;
     if (!/^\d{6}$/.test(q)) {
       try {
@@ -51,14 +104,25 @@
       } catch (_) {}
     }
     try {
-      const res = await fetch(API(code));
+      const res = await fetch(`data/${code}.json`);
       if (!res.ok) throw new Error("not found");
       render(await res.json());
     } catch (e) {
       $("#result").innerHTML =
         `<div class="card loading">‘${esc(q)}’ 에 대한 데모 데이터가 없습니다.<br>
-         아래 예시 종목을 눌러보세요. (데모는 샘플 3종만 제공)</div>`;
+         아래 예시 종목을 눌러보거나, <b>백엔드 연결</b>로 실시간 모드를 켜세요.<br>
+         <span style="font-size:13px">(데모는 샘플 3종만 제공)</span></div>`;
     }
+  }
+
+  function connectBackend() {
+    const cur = base();
+    const v = window.prompt(
+      "배포한 백엔드 주소를 입력하세요 (예: https://hannun-stock-api.onrender.com)\n" +
+      "비워두고 확인하면 데모 모드로 돌아갑니다.", cur || "");
+    if (v === null) return;                 // 취소
+    window.HannunConfig.set(v);
+    loadIndex();
   }
 
   function badgeNode(b) {
@@ -221,6 +285,7 @@
   // ---------- 이벤트 ----------
   window.addEventListener("DOMContentLoaded", () => {
     $("#go").onclick = () => analyze($("#q").value);
+    $("#conn").onclick = connectBackend;
     $("#q").addEventListener("keydown", e => { if (e.key === "Enter") analyze($("#q").value); });
     window.addEventListener("resize", () => {
       const cv = $("#chart");

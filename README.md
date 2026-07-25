@@ -66,22 +66,33 @@ python3 -m http.server 8000
 python3 backend/tools/gen_samples.py   # data/*.json 재생성 (순수 파이썬, 의존성 없음)
 ```
 
-## 실데이터 백엔드 실행 (참고 구현)
+## 실시간 조회 켜기 (백엔드 배포)
+
+종목명·코드로 **실시간 분석**을 하려면 백엔드를 배포하고 프론트에서 연결합니다.
+
+1. **배포** — [`backend/README.md`](backend/README.md) 참고. 저장소 루트에 Render 블루프린트
+   ([`render.yaml`](render.yaml))가 있어 **Render → New → Blueprint** 로 몇 클릭이면 됩니다.
+   Railway/Fly.io/Docker도 지원(`backend/Dockerfile`).
+   `DART_API_KEY` 를 넣으면 재무(축3)까지, 없어도 차트·수급·가격(축1·2·4)은 동작합니다.
+2. **연결** — 데모 페이지 우측 상단 **"백엔드 연결"** 버튼에 배포 주소를 붙여넣으면
+   배지가 **🟢 실시간**으로 바뀝니다. (또는 `?api=https://내주소`, 또는
+   [`assets/config.js`](assets/config.js) 의 `STOCK_API_BASE` 에 고정)
+
+로컬에서 백엔드만 실행:
 
 ```bash
 cd backend
 pip install -r requirements.txt
-export DART_API_KEY=<DART OpenAPI 인증키>
-uvicorn app.main:app --reload
-# GET http://localhost:8000/api/analyze?code=005930
+export DART_API_KEY=<DART OpenAPI 인증키>   # 선택
+uvicorn app.main:app --reload --port 8000
+# GET http://localhost:8000/api/analyze?query=삼성전자
 ```
 
-그런 다음 `assets/app.js` 상단의 `API()` 를 정적 스냅샷 경로 대신
-백엔드 엔드포인트(`/api/analyze?code=...`)로 바꾸면 실데이터로 동작합니다.
-
-> pykrx / OpenDartReader / 증권사 오픈API의 함수 시그니처·컬럼명·이용 약관은
-> **최신 공식 문서 기준으로 반드시 재확인**하세요. `backend/` 코드는 구조를 보여주는
-> 참고 구현이며, 실제 응답 스키마에 맞춰 조정이 필요합니다.
+> **정직 고지:** 이 개발 환경은 외부망(KRX)이 차단돼 실 KRX/DART 호출은 **배포 후 검증**이
+> 필요합니다(로직·연동은 검증 완료). pykrx / OpenDartReader의 함수·컬럼·약관은
+> **최신 공식 문서 기준으로 재확인**하세요. DART 요약 재무엔 이자보상배율·현금흐름이 없어
+> 해당 항목은 "정보 부족"으로 표시되며, 업종 백분위는 시장 전체 대비 근사입니다
+> (상세는 `backend/README.md`).
 
 ## 기술 스택
 
@@ -93,13 +104,16 @@ uvicorn app.main:app --reload
 
 ```
 .
-├── index.html            # 데모 진입점 (GitHub Pages)
-├── assets/               # styles.css · chart.js · app.js
+├── index.html            # 데모/실시간 진입점 (GitHub Pages)
+├── assets/               # styles.css · chart.js · app.js · config.js(백엔드 연결)
 ├── data/                 # 백엔드 출력 스냅샷 (index.json, <code>.json)
 ├── backend/
 │   ├── app/              # FastAPI + 4축 계산 + 종합 판정 + 스키마
 │   ├── tools/gen_samples.py   # 샘플 스냅샷 생성기
-│   └── requirements.txt
+│   ├── Dockerfile · Procfile · railway.json   # 배포 설정
+│   ├── requirements.txt
+│   └── README.md         # 배포·연결 가이드
+├── render.yaml           # Render 원클릭 블루프린트
 ├── DESIGN.md             # 사양 → 구현 매핑 문서
 └── .nojekyll
 ```

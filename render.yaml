@@ -1,0 +1,17 @@
+# Render Blueprint — https://render.com  (New + → Blueprint → 이 저장소 선택)
+# 무료 플랜으로 백엔드를 배포합니다. GitHub Pages(정적)와는 별개의 서비스입니다.
+services:
+  - type: web
+    name: hannun-stock-api
+    runtime: docker
+    rootDir: backend            # Dockerfile 위치
+    plan: free
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      # DART 재무(축3)까지 쓰려면 값 입력. 비워두면 축1·2·4(KRX)만 동작.
+      - key: DART_API_KEY
+        sync: false
+      # 프론트(GitHub Pages) 도메인만 허용하려면 아래를 https://awesomewy.github.io 로.
+      - key: ALLOW_ORIGINS
+        value: "*"
