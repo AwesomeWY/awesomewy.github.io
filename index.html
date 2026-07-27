@@ -230,6 +230,20 @@
   .btn-save2{ background:var(--blue-deep); color:#fff; font-size:18px; }
   .saved-imgs img{ width:100%; border-radius:14px; box-shadow:var(--shadow); margin-bottom:12px; display:block; }
 
+  /* ===== 완성한 이야기 한 장 ===== */
+  .story-sheet{
+    background:#fff; border:6px solid var(--pink); border-radius:26px;
+    box-shadow:var(--shadow); padding:30px 26px; max-width:620px; margin:0 auto;
+  }
+  .story-sheet .ss-emoji{ text-align:center; font-size:44px; }
+  .story-sheet .ss-title{ text-align:center; font-size:30px; font-weight:900; line-height:1.35; margin:6px 0 2px; color:var(--ink); }
+  .story-sheet .ss-author{ text-align:center; font-size:18px; color:var(--ink-soft); font-weight:700; margin-bottom:14px; }
+  .story-sheet hr{ border:none; border-top:2px solid var(--pink); margin:16px 0; }
+  .story-sheet .ss-line{ font-size:21px; line-height:1.65; font-weight:600; color:var(--ink); margin:10px 0; }
+  .story-sheet .ss-note-label{ font-weight:800; color:var(--purple-deep); font-size:18px; }
+  .story-sheet .ss-note{ font-size:20px; line-height:1.6; font-weight:600; color:var(--ink); margin-top:6px; }
+  .story-sheet .ss-stickers{ text-align:center; font-size:30px; margin-top:18px; letter-spacing:4px; }
+
   /* ===== 인쇄 ===== */
   @media print{
     .app-header, .nav-bar, .no-print{ display:none !important; }
@@ -761,49 +775,32 @@ function renderPreview(){
   app.appendChild(el(`<div class="book-intro no-print">
     <div class="step-badge">📚 완성!</div>
     <h2 class="question">나만의 스토리북이 완성됐어요!</h2>
-    <p class="hint">아래에서 8쪽을 확인하고, <b>이미지 한 장으로 저장</b>할 수 있어요.</p>
+    <p class="hint">내가 쓴 이야기가 <b>한 장</b>에 모였어요. 아래 버튼으로 그림 파일로 저장해요.</p>
     <div class="save-btns">
       <button class="btn btn-save" id="imgSaveBtn">🖼️ 이미지로 저장 (한 장)</button>
     </div>
     <div class="print-tip">
-      버튼을 누르면 8쪽이 <b>한 장의 그림</b>으로 저장돼요. 🖼️<br/>
       저장이 안 되는 화면에서는 아래에 나타난 그림을 <b>꾹 눌러(오른쪽 클릭) 저장</b>하세요.
     </div>
     <div class="saved-imgs" id="savedImgs"></div>
   </div>`));
 
-  const book = el(`<div class="book"></div>`);
-
-  // 표지
-  book.appendChild(el(`<div class="book-page cover-page">
-    <div class="pg-num">1 / 8</div>
-    <div style="font-size:40px">📖</div>
-    <div class="cover-title">${escapeHtml(state.cover.title) || '＿＿＿'}</div>
-    <div class="cover-author">글·그림 · ${escapeHtml(state.cover.name)||'＿＿＿'}</div>
-    <div class="pg-stickers">${(state.pages[0].stickers||[]).join(' ')}</div>
-  </div>`));
-
-  // 내용 페이지 1~6 (index 1..6)
+  // 완성한 이야기 — 한 장으로 정리
+  const sheet = el(`<div class="story-sheet"></div>`);
+  sheet.appendChild(el(`<div class="ss-emoji">📖</div>`));
+  sheet.appendChild(el(`<div class="ss-title">${escapeHtml(state.cover.title) || '＿＿＿'}</div>`));
+  sheet.appendChild(el(`<div class="ss-author">글·그림 · ${escapeHtml(state.cover.name) || '＿＿＿'}</div>`));
+  sheet.appendChild(el(`<hr/>`));
   for(let i=1;i<=6;i++){
-    const p = PAGES[i];
-    book.appendChild(el(`<div class="book-page">
-      <div class="pg-num">${i+1} / 8</div>
-      <div class="pg-badge">${p.badge}</div>
-      <div class="pg-text">${escapeHtml(currentText(i)) || '＿＿＿'}</div>
-      <div class="pg-stickers">${(state.pages[i].stickers||[]).join(' ')}</div>
-    </div>`));
+    const t = currentText(i);
+    if(t && !t.includes('＿')){ sheet.appendChild(el(`<p class="ss-line">${escapeHtml(t.trim())}</p>`)); }
   }
-
-  // 백면 (index 7)
-  const bp = PAGES[7];
-  book.appendChild(el(`<div class="book-page back-page">
-    <div class="pg-num">8 / 8</div>
-    <div class="pg-badge">${bp.badge}</div>
-    <div class="pg-text">${escapeHtml(currentText(7)) || '＿＿＿'}</div>
-    <div class="pg-stickers">${(state.pages[7].stickers||[]).join(' ')}</div>
-  </div>`));
-
-  app.appendChild(book);
+  sheet.appendChild(el(`<hr/>`));
+  sheet.appendChild(el(`<div class="ss-note-label">✍️ 작가의 말</div>`));
+  sheet.appendChild(el(`<p class="ss-note">${escapeHtml(currentText(7)) || '＿＿＿'}</p>`));
+  const allStickers = [].concat(...state.pages.map(p=>p.stickers||[]));
+  if(allStickers.length){ sheet.appendChild(el(`<div class="ss-stickers">${allStickers.slice(0,12).join(' ')}</div>`)); }
+  app.appendChild(sheet);
 
   document.getElementById('imgSaveBtn').addEventListener('click', e=>saveImages(e.currentTarget));
 }
@@ -812,18 +809,9 @@ function escapeHtml(s){
   return (s||'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 }
 
-/* ---------- 이미지(PNG) 저장 — Canvas로 직접 그리기 ---------- */
-const IMG_W = 900, IMG_H = 1200;
+/* ---------- 이미지(PNG) 저장 — 완성한 이야기를 한 장으로 그리기 ---------- */
 const KFONT = '"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif';
 
-function collectBookPages(){
-  const arr = [{ kind:'cover', pageNum:'1 / 8', title:state.cover.title, author:state.cover.name, stickers:state.pages[0].stickers }];
-  for(let i=1;i<=6;i++){
-    arr.push({ kind:'content', badge:PAGES[i].badge, pageNum:`${i+1} / 8`, text:currentText(i), stickers:state.pages[i].stickers });
-  }
-  arr.push({ kind:'back', badge:PAGES[7].badge, pageNum:'8 / 8', text:currentText(7), stickers:state.pages[7].stickers });
-  return arr;
-}
 function roundRect(ctx,x,y,w,h,r){
   ctx.beginPath();
   ctx.moveTo(x+r,y);
@@ -844,55 +832,6 @@ function wrapText(ctx,text,maxW){
   });
   return lines;
 }
-function drawStickerRow(ctx, stickers, cx, y){
-  if(!stickers || !stickers.length) return;
-  ctx.font=`72px ${KFONT}`; ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText(stickers.join('  '), cx, y);
-  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
-}
-function drawPage(ctx, pg){
-  const W=IMG_W, H=IMG_H, m=30;
-  ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,W,H);
-  let border='#ffd6e7', tint='#fff7fb';
-  if(pg.kind==='cover'){ border='#5aa9ff'; tint='#eef6ff'; }
-  else if(pg.kind==='back'){ border='#2fbf71'; tint='#eefff5'; }
-  const grad=ctx.createLinearGradient(0,0,0,H);
-  grad.addColorStop(0,'#ffffff'); grad.addColorStop(1,tint);
-  roundRect(ctx,m,m,W-2*m,H-2*m,40); ctx.fillStyle=grad; ctx.fill();
-  ctx.lineWidth=12; ctx.strokeStyle=border; ctx.stroke();
-
-  // 쪽 번호 알약
-  ctx.font=`800 30px ${KFONT}`;
-  const pw=ctx.measureText(pg.pageNum).width+44;
-  roundRect(ctx, W-m-30-pw, m+34, pw, 52, 26); ctx.fillStyle='#fff2bf'; ctx.fill();
-  ctx.fillStyle='#8a6d00'; ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText(pg.pageNum, W-m-30-pw/2, m+34+27);
-  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
-
-  if(pg.kind==='cover'){
-    ctx.textAlign='center';
-    ctx.font=`110px ${KFONT}`; ctx.fillText('📖', W/2, 350);
-    ctx.fillStyle='#40364d'; ctx.font=`900 62px ${KFONT}`;
-    let y=520; wrapText(ctx, pg.title||'＿＿＿', W-220).forEach(l=>{ ctx.fillText(l, W/2, y); y+=84; });
-    ctx.fillStyle='#6d6480'; ctx.font=`700 38px ${KFONT}`;
-    ctx.fillText('글·그림 · '+(pg.author||'＿＿＿'), W/2, y+30);
-    ctx.textAlign='left';
-  } else {
-    ctx.fillStyle='#a281ff'; ctx.font=`800 32px ${KFONT}`;
-    ctx.fillText(pg.badge||'', m+50, m+86);
-    ctx.fillStyle='#40364d'; ctx.font=`600 48px ${KFONT}`;
-    let y=m+210; wrapText(ctx, pg.text||'＿＿＿', W-2*m-100).forEach(l=>{ ctx.fillText(l, m+50, y); y+=76; });
-  }
-  drawStickerRow(ctx, pg.stickers, W/2, H-180);
-}
-async function renderBookCanvases(){
-  if(document.fonts && document.fonts.ready){ try{ await document.fonts.ready; }catch(e){} }
-  return collectBookPages().map(pg=>{
-    const c=document.createElement('canvas'); c.width=IMG_W; c.height=IMG_H;
-    drawPage(c.getContext('2d'), pg);
-    return c;
-  });
-}
 function bookFilename(base){
   const nm=(state.cover.name||'').trim();
   return (nm?nm+'_':'')+base+'.png';
@@ -909,27 +848,60 @@ function showSavedImages(items){
   });
   box.scrollIntoView({behavior:'smooth', block:'start'});
 }
-async function saveImages(btn){
-  const label=btn.textContent; btn.disabled=true; btn.textContent='그림 만드는 중… ⏳';
-  try{
-    const canvases=await renderBookCanvases();     // 8쪽 각각 900x1200 캔버스
-    // 8쪽을 한 장(2열 x 4행 격자)에 배치
-    const cols=2, rows=4, cellW=720, cellH=960, gap=30, pad=50;
-    const W = pad*2 + cols*cellW + (cols-1)*gap;
-    const H = pad*2 + rows*cellH + (rows-1)*gap;
-    const sheet=document.createElement('canvas'); sheet.width=W; sheet.height=H;
-    const ctx=sheet.getContext('2d');
-    ctx.fillStyle='#fff7fb'; ctx.fillRect(0,0,W,H);
-    canvases.forEach((c,i)=>{
-      const col=i%cols, row=Math.floor(i/cols);
-      const x=pad+col*(cellW+gap), y=pad+row*(cellH+gap);
-      ctx.drawImage(c, x, y, cellW, cellH);        // 3:4 비율 그대로 축소
+
+/* 완성한 문장을 모두 한 장(A4 세로 느낌)에 정리해서 그린다 */
+function renderStorySheetCanvas(){
+  const W = 1000, mx = 90, cw = W - 2*mx;          // 좌우 여백
+  const measure = document.createElement('canvas').getContext('2d');
+  const els = []; let y = 0;
+  function add(text, {font, color, align='left', lh, gapAfter=0, maxW=cw}){
+    measure.font = font;
+    wrapText(measure, text, maxW).forEach(line=>{
+      y += lh; els.push({ t:line, font, color, align, x: align==='center'? W/2 : mx, y });
     });
-    const url=sheet.toDataURL('image/png');
-    downloadDataURL(url, bookFilename('스토리북'));
-    showSavedImages([{ url, label:'완성한 스토리북 (한 장)' }]);
+    y += gapAfter;
+  }
+  y = 80;
+  add('📖', { font:`58px ${KFONT}`, color:'#40364d', align:'center', lh:66, gapAfter:6 });
+  add(state.cover.title || '＿＿＿', { font:`900 54px ${KFONT}`, color:'#40364d', align:'center', lh:68, gapAfter:2 });
+  add('글·그림 · '+(state.cover.name || '＿＿＿'), { font:`700 30px ${KFONT}`, color:'#6d6480', align:'center', lh:44, gapAfter:26 });
+  const div1 = y; y += 34;
+  for(let i=1;i<=6;i++){
+    const t = currentText(i);
+    if(t && !t.includes('＿')){ add(t.trim(), { font:`600 34px ${KFONT}`, color:'#40364d', lh:52, gapAfter:16 }); }
+  }
+  y += 6;
+  const div2 = y; y += 40;
+  add('✍️ 작가의 말', { font:`800 28px ${KFONT}`, color:'#a281ff', lh:40, gapAfter:8 });
+  add(currentText(7) || '＿＿＿', { font:`600 32px ${KFONT}`, color:'#40364d', lh:50, gapAfter:20 });
+  const allStickers = [].concat(...state.pages.map(p=>p.stickers||[])).slice(0,12);
+  if(allStickers.length){ add(allStickers.join('  '), { font:`56px ${KFONT}`, color:'#40364d', align:'center', lh:74, gapAfter:0 }); }
+
+  const H = Math.max(y + 80, Math.round(W*1.414));  // 최소 A4 세로 비율
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,W,H);
+  const grad = ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,'#ffffff'); grad.addColorStop(1,'#fff7fb');
+  roundRect(ctx, 24, 24, W-48, H-48, 34); ctx.fillStyle = grad; ctx.fill();
+  ctx.lineWidth = 12; ctx.strokeStyle = '#ff8bbd'; ctx.stroke();
+  ctx.strokeStyle = '#ffd6e7'; ctx.lineWidth = 3;
+  [div1, div2].forEach(dy=>{ ctx.beginPath(); ctx.moveTo(mx, dy); ctx.lineTo(W-mx, dy); ctx.stroke(); });
+  ctx.textBaseline = 'alphabetic';
+  els.forEach(e=>{ ctx.font = e.font; ctx.fillStyle = e.color; ctx.textAlign = e.align; ctx.fillText(e.t, e.x, e.y); });
+  ctx.textAlign = 'left';
+  return c;
+}
+
+async function saveImages(btn){
+  const label = btn.textContent; btn.disabled = true; btn.textContent = '그림 만드는 중… ⏳';
+  try{
+    if(document.fonts && document.fonts.ready){ try{ await document.fonts.ready; }catch(e){} }
+    const url = renderStorySheetCanvas().toDataURL('image/png');
+    downloadDataURL(url, bookFilename('스토리북'));      // 한 장만 저장
+    showSavedImages([{ url, label:'완성한 이야기 한 장' }]);
   }finally{
-    btn.disabled=false; btn.textContent=label;
+    btn.disabled = false; btn.textContent = label;
   }
 }
 
