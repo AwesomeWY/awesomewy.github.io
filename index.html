@@ -761,14 +761,12 @@ function renderPreview(){
   app.appendChild(el(`<div class="book-intro no-print">
     <div class="step-badge">📚 완성!</div>
     <h2 class="question">나만의 스토리북이 완성됐어요!</h2>
-    <p class="hint">아래에서 8쪽을 확인하고, <b>이미지로 저장</b>하거나 인쇄할 수 있어요.</p>
+    <p class="hint">아래에서 8쪽을 확인하고, <b>이미지로 저장</b>할 수 있어요.</p>
     <div class="save-btns">
-      <button class="btn btn-save" id="imgAllBtn">🖼️ 이미지로 저장 (한 장에 8쪽)</button>
-      <button class="btn btn-save2" id="imgEachBtn">🗂️ 쪽마다 따로 저장</button>
-      <button class="btn btn-more" id="printBtn">🖨️ 인쇄하기 (PDF)</button>
+      <button class="btn btn-save" id="imgEachBtn">🖼️ 이미지로 저장 (쪽마다 1장)</button>
     </div>
     <div class="print-tip">
-      <b>이미지로 저장</b>을 누르면 PNG 그림 파일로 저장돼요. 🖼️<br/>
+      버튼을 누르면 8쪽이 <b>각각 한 장씩</b> PNG 그림으로 저장돼요. 🖼️<br/>
       저장이 안 되는 화면에서는 아래에 나타난 그림을 <b>꾹 눌러(오른쪽 클릭) 저장</b>하세요.
     </div>
     <div class="saved-imgs" id="savedImgs"></div>
@@ -807,9 +805,7 @@ function renderPreview(){
 
   app.appendChild(book);
 
-  document.getElementById('printBtn').addEventListener('click', ()=>window.print());
-  document.getElementById('imgAllBtn').addEventListener('click', e=>saveImages(e.currentTarget, false));
-  document.getElementById('imgEachBtn').addEventListener('click', e=>saveImages(e.currentTarget, true));
+  document.getElementById('imgEachBtn').addEventListener('click', e=>saveImages(e.currentTarget));
 }
 
 function escapeHtml(s){
@@ -913,28 +909,18 @@ function showSavedImages(items){
   });
   box.scrollIntoView({behavior:'smooth', block:'start'});
 }
-async function saveImages(btn, perPage){
+async function saveImages(btn){
   const label=btn.textContent; btn.disabled=true; btn.textContent='그림 만드는 중… ⏳';
   try{
     const canvases=await renderBookCanvases();
-    if(perPage){
-      const items=[];
-      for(let i=0;i<canvases.length;i++){
-        const url=canvases[i].toDataURL('image/png');
-        downloadDataURL(url, bookFilename(`스토리북_${i+1}쪽`));
-        items.push({ url, label:`${i+1}쪽` });
-        await new Promise(r=>setTimeout(r,350));   // 브라우저 다중 저장 간격
-      }
-      showSavedImages(items);
-    }else{
-      const gap=24, H=canvases.length*IMG_H+(canvases.length-1)*gap;
-      const big=document.createElement('canvas'); big.width=IMG_W; big.height=H;
-      const ctx=big.getContext('2d'); ctx.fillStyle='#fff7fb'; ctx.fillRect(0,0,IMG_W,H);
-      canvases.forEach((c,i)=>ctx.drawImage(c,0,i*(IMG_H+gap)));
-      const url=big.toDataURL('image/png');
-      downloadDataURL(url, bookFilename('스토리북_전체'));
-      showSavedImages([{ url, label:'완성한 스토리북 8쪽' }]);
+    const items=[];
+    for(let i=0;i<canvases.length;i++){
+      const url=canvases[i].toDataURL('image/png');
+      downloadDataURL(url, bookFilename(`스토리북_${i+1}쪽`));   // 쪽마다 한 장씩 저장
+      items.push({ url, label:`${i+1}쪽` });
+      await new Promise(r=>setTimeout(r,350));                  // 브라우저 다중 저장 간격
     }
+    showSavedImages(items);
   }finally{
     btn.disabled=false; btn.textContent=label;
   }
