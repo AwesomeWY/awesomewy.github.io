@@ -817,37 +817,42 @@ async function buildAndShowStoryImage(){
   const im = el(`<img alt="완성한 내 이야기" title="오른쪽 클릭 → 이미지를 다른 이름으로 저장" />`);
   im.src = url; box.appendChild(im);
 }
-// 브라우저 '다른 이름으로 저장' 창을 띄운다(지원 시). 안 되면 일반 다운로드로 대체.
-async function saveAs(blob, filename){
-  if(window.showSaveFilePicker){
-    try{
-      const handle = await window.showSaveFilePicker({
-        suggestedName: filename,
-        types: [{ description:'PNG 이미지', accept:{ 'image/png':['.png'] } }],
-      });
-      const w = await handle.createWritable(); await w.write(blob); await w.close();
-      return 'saved';
-    }catch(e){ if(e && e.name === 'AbortError') return 'cancel'; }
-  }
-  const url = URL.createObjectURL(blob);
-  downloadDataURL(url, filename);
-  setTimeout(()=>URL.revokeObjectURL(url), 1000);
-  return 'download';
-}
 async function saveImages(btn){
   const label = btn.textContent; btn.disabled = true; btn.textContent = '저장 준비 중… ⏳';
   try{
     if(document.fonts && document.fonts.ready){ try{ await document.fonts.ready; }catch(e){} }
     const canvas = renderStorySheetCanvas();
     const blob = await new Promise(res=>canvas.toBlob(res, 'image/png'));
-    const res = await saveAs(blob, bookFilename('스토리북'));
-    if(res === 'saved'){
-      setSaveStatus('✅ 저장했어요!');
-    }else if(res === 'cancel'){
-      setSaveStatus('저장을 취소했어요. 다시 눌러 주세요.');
-    }else{
-      setSaveStatus('✅ 저장했어요! 이름을 정해 저장하려면 아래 그림을 <b>마우스 오른쪽 클릭 → 이미지를 다른 이름으로 저장</b> 하세요.');
+    const filename = bookFilename('스토리북');
+
+    // 1) 진짜 '다른 이름으로 저장' 창 (크롬·엣지 등 지원 브라우저)
+    if(window.showSaveFilePicker){
+      try{
+        const handle = await window.showSaveFilePicker({
+          suggestedName: filename,
+          types: [{ description:'PNG 이미지', accept:{ 'image/png':['.png'] } }],
+        });
+        const w = await handle.createWritable(); await w.write(blob); await w.close();
+        setSaveStatus('✅ 저장했어요!');
+        return;
+      }catch(e){
+        if(e && e.name === 'AbortError'){ setSaveStatus('저장을 취소했어요. 다시 눌러 주세요.'); return; }
+        // 그 외(미리보기 iframe 등 차단) → 아래 방법으로 계속
+      }
     }
+
+    // 2) 새 탭에 그림 열기 → 그 탭에서 자유롭게 저장(미리보기 iframe 우회)
+    const url = URL.createObjectURL(blob);
+    let win = null;
+    try{ win = window.open(url, '_blank'); }catch(e){ win = null; }
+    if(win){
+      setSaveStatus('🖼️ 새 탭에 그림이 열렸어요! 그 그림을 <b>마우스 오른쪽 클릭 → 이미지를 다른 이름으로 저장</b> 하세요.');
+    }else{
+      // 3) 마지막 수단: 다운로드 시도 + 아래 그림 오른쪽 클릭 안내
+      downloadDataURL(url, filename);
+      setSaveStatus('저장이 안 되면, 아래 그림을 <b>마우스 오른쪽 클릭 → 이미지를 다른 이름으로 저장</b> 하세요. (휴대폰은 그림을 꾹 눌러요)');
+    }
+    setTimeout(()=>URL.revokeObjectURL(url), 60000);
   }finally{
     btn.disabled = false; btn.textContent = label;
   }
