@@ -164,27 +164,6 @@
   .btn-more{ background:var(--yellow); color:#8a6d00; }
   .btn-ghost{ background:#fff; color:var(--ink); border:2px solid #eee; }
 
-  /* ===== 스티커/그림 영역 ===== */
-  .sticker-palette{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
-  .sticker-btn{
-    font-size:26px; background:#fff; border:2px solid #f0ecf7; border-radius:14px;
-    width:52px; height:52px; line-height:1; box-shadow:var(--shadow-soft);
-    transition:transform .1s;
-  }
-  .sticker-btn:hover{ transform:scale(1.12); }
-  .draw-area{
-    margin-top:12px; min-height:150px; border:3px dashed var(--purple-deep);
-    border-radius:18px; background:repeating-linear-gradient(45deg,#faf7ff,#faf7ff 12px,#f4eeff 12px,#f4eeff 24px);
-    display:flex; flex-wrap:wrap; align-items:center; justify-content:center;
-    gap:6px; padding:14px; position:relative;
-  }
-  .draw-placeholder{ color:var(--ink-soft); font-weight:700; font-size:16px; }
-  .placed-sticker{
-    font-size:40px; background:transparent; border:none; padding:2px;
-    transition:transform .1s;
-  }
-  .placed-sticker:hover{ transform:scale(1.2) rotate(-6deg); }
-
   /* ===== 하단 네비 ===== */
   .nav-bar{
     position:fixed; bottom:0; left:0; right:0; z-index:20;
@@ -242,7 +221,6 @@
   .story-sheet .ss-line{ font-size:21px; line-height:1.65; font-weight:600; color:var(--ink); margin:10px 0; }
   .story-sheet .ss-note-label{ font-weight:800; color:var(--purple-deep); font-size:18px; }
   .story-sheet .ss-note{ font-size:20px; line-height:1.6; font-weight:600; color:var(--ink); margin-top:6px; }
-  .story-sheet .ss-stickers{ text-align:center; font-size:30px; margin-top:18px; letter-spacing:4px; }
 
   /* ===== 인쇄 ===== */
   @media print{
@@ -300,8 +278,6 @@ function josa(word, type){
 function slot(v){ return v || '＿＿＿'; }
 
 /* ---------- 페이지 설정 ---------- */
-const STICKERS_COMMON = ['⭐','🌈','💖','✨','🎈','🌟'];
-
 const PAGES = [
   /* 0. 표지 */
   {
@@ -317,7 +293,6 @@ const PAGES = [
       '서연이의 비밀 친구',
       '하준이의 수요일 대모험',
     ],
-    stickers:['📖','✨','🌈','⭐','🎀','🏰'],
   },
   /* 1. 기 */
   {
@@ -336,7 +311,6 @@ const PAGES = [
       '나는 장난을 좋아하지만 마음은 아주 따뜻해요.',
       '나는 책 읽기를 좋아하는 씩씩한 어린이예요.',
     ],
-    stickers:['😀','🎨','⚽','🎮','📚','🐶','🎵','🍳'],
   },
   /* 2. 승① */
   {
@@ -355,7 +329,6 @@ const PAGES = [
       '그러던 어느 날, 이름이 없는 편지가 도착했어요.',
       '그러던 어느 날, 전학 온 친구가 나에게 말을 걸었어요.',
     ],
-    stickers:['🔑','🐕','🚪','✉️','👀','✨'],
   },
   /* 3. 승② */
   {
@@ -374,7 +347,6 @@ const PAGES = [
       '나는 편지를 보낸 사람을 알아내기로 했어요.',
       '나는 새 친구를 도와주기로 결심했어요.',
     ],
-    stickers:['🔍','🗺️','👣','🗣️','💪','🌟'],
   },
   /* 4. 전① */
   {
@@ -395,7 +367,6 @@ const PAGES = [
       '그런데 시간이 얼마 남지 않았어요. 나는 마음이 급했어요.',
       '그런데 큰 문제가 나타났어요. 나는 어떻게 해야 할지 막막했어요.',
     ],
-    stickers:['😨','😰','😢','⏰','❓','🌑'],
   },
   /* 5. 전② */
   {
@@ -416,7 +387,6 @@ const PAGES = [
       '나는 무섭지만 포기하지 않았어요. 그리고 끝까지 해냈어요.',
       '나는 용기를 내서 큰 소리로 말했어요. 그리고 마음이 편해졌어요.',
     ],
-    stickers:['😤','🙏','🔥','🌟','💪','😮‍💨'],
   },
   /* 6. 결 */
   {
@@ -437,7 +407,6 @@ const PAGES = [
       '마침내 문제를 모두 해결했어요. 나는 혼자보다 함께가 더 강하다는 걸 알게 되었어요.',
       '마침내 편지의 주인을 찾았어요. 나는 끝까지 노력하면 답을 찾는다는 걸 배웠어요.',
     ],
-    stickers:['🎉','🏆','🤝','💡','🌈','⭐'],
   },
   /* 7. 백면 */
   {
@@ -460,7 +429,6 @@ const PAGES = [
       '여러분의 이야기도 꼭 만들어 보세요.',
       '우리 모두는 각자 특별한 주인공이에요.',
     ],
-    stickers:['👋','💌','📗','😊','🌟','💖'],
   },
 ];
 
@@ -520,8 +488,8 @@ const PREVIEW_STEP = TOTAL;         // 미리보기 단계 index = 8
 const state = {
   step: 0,
   cover:{ title:'', name:'' },
-  // 각 페이지: { slots:{}, text:'', edited:false, exStart:0, stickers:[] }
-  pages: PAGES.map(()=>({ slots:{}, text:'', edited:false, exStart:0, stickers:[] })),
+  // 각 페이지: { slots:{}, text:'', edited:false, exStart:0 }
+  pages: PAGES.map(()=>({ slots:{}, text:'', edited:false, exStart:0 })),
 };
 
 /* ---------- 문장 생성 ---------- */
@@ -645,7 +613,6 @@ function renderCover(p, ps){
   wrap.appendChild(bank);
 
   app.appendChild(wrap);
-  renderStickerArea(p, ps, wrap);
   renderWhyNote(p, wrap);
   renderFeedback(0);
 }
@@ -703,7 +670,6 @@ function renderStandard(pi, p, ps){
   wrap.appendChild(moreBtn);
 
   app.appendChild(wrap);
-  renderStickerArea(p, ps, wrap);
   renderWhyNote(p, wrap);
   renderFeedback(pi);
 }
@@ -722,35 +688,6 @@ function renderExamples(pi, bank, ta){
     });
     bank.appendChild(chip);
   }
-}
-
-/* ----- 스티커 / 그림 영역 ----- */
-function renderStickerArea(p, ps, wrap){
-  wrap.appendChild(el(`<div class="section-label no-print"><span class="num">🎨</span> 스티커를 붙이거나, 인쇄해서 그림을 그려요</div>`));
-  const palette = el(`<div class="sticker-palette no-print"></div>`);
-  [...p.stickers, ...STICKERS_COMMON].forEach(em=>{
-    const b = el(`<button class="sticker-btn">${em}</button>`);
-    b.addEventListener('click', ()=>{ ps.stickers.push(em); drawStickers(); });
-    palette.appendChild(b);
-  });
-  wrap.appendChild(palette);
-
-  const draw = el(`<div class="draw-area" id="drawArea"></div>`);
-  wrap.appendChild(draw);
-
-  function drawStickers(){
-    draw.innerHTML='';
-    if(ps.stickers.length===0){
-      draw.appendChild(el(`<div class="draw-placeholder">여기에 그림을 그릴 거예요 🎨<br/>(위 스티커를 눌러 붙이거나, 인쇄 후 손으로 그려요)</div>`));
-    }else{
-      ps.stickers.forEach((em,idx)=>{
-        const s = el(`<button class="placed-sticker no-print" title="누르면 지워져요">${em}</button>`);
-        s.addEventListener('click', ()=>{ ps.stickers.splice(idx,1); drawStickers(); });
-        draw.appendChild(s);
-      });
-    }
-  }
-  drawStickers();
 }
 
 /* ----- 피드백(잘했어요) ----- */
@@ -798,8 +735,6 @@ function renderPreview(){
   sheet.appendChild(el(`<hr/>`));
   sheet.appendChild(el(`<div class="ss-note-label">✍️ 작가의 말</div>`));
   sheet.appendChild(el(`<p class="ss-note">${escapeHtml(currentText(7)) || '＿＿＿'}</p>`));
-  const allStickers = [].concat(...state.pages.map(p=>p.stickers||[]));
-  if(allStickers.length){ sheet.appendChild(el(`<div class="ss-stickers">${allStickers.slice(0,12).join(' ')}</div>`)); }
   app.appendChild(sheet);
 
   document.getElementById('imgSaveBtn').addEventListener('click', e=>saveImages(e.currentTarget));
@@ -874,8 +809,6 @@ function renderStorySheetCanvas(){
   const div2 = y; y += 40;
   add('✍️ 작가의 말', { font:`800 28px ${KFONT}`, color:'#a281ff', lh:40, gapAfter:8 });
   add(currentText(7) || '＿＿＿', { font:`600 32px ${KFONT}`, color:'#40364d', lh:50, gapAfter:20 });
-  const allStickers = [].concat(...state.pages.map(p=>p.stickers||[])).slice(0,12);
-  if(allStickers.length){ add(allStickers.join('  '), { font:`56px ${KFONT}`, color:'#40364d', align:'center', lh:74, gapAfter:0 }); }
 
   const H = Math.max(y + 80, Math.round(W*1.414));  // 최소 A4 세로 비율
   const c = document.createElement('canvas'); c.width = W; c.height = H;
