@@ -208,6 +208,7 @@
   .btn-save{ background:var(--green-deep); color:#fff; font-size:20px; padding:16px 26px; }
   .btn-copy{ background:var(--blue-deep); color:#fff; font-size:20px; padding:16px 26px; }
   .saved-imgs img{ width:100%; border-radius:14px; box-shadow:var(--shadow); margin-bottom:12px; display:block; }
+  .img-loading{ text-align:center; color:var(--ink-soft); font-weight:700; padding:30px 0; }
 
   /* ===== 완성한 이야기 한 장 ===== */
   .story-sheet{
@@ -712,35 +713,19 @@ function renderPreview(){
   app.appendChild(el(`<div class="book-intro no-print">
     <div class="step-badge">📚 완성!</div>
     <h2 class="question">나만의 스토리북이 완성됐어요!</h2>
-    <p class="hint">내가 쓴 이야기가 <b>한 장</b>에 모였어요. 그림으로 저장하거나 복사해요.</p>
+    <p class="hint">아래 그림이 완성된 내 이야기예요. 저장해서 간직해요.</p>
     <div class="save-btns">
       <button class="btn btn-save" id="imgSaveBtn">🖼️ 이미지로 저장</button>
-      <button class="btn btn-copy" id="imgCopyBtn">📋 이미지 복사</button>
     </div>
     <div class="print-tip" id="saveStatus">
-      <b>이미지 복사</b>를 누르면 복사돼요. 원하는 곳에 <b>붙여넣기(Ctrl+V 또는 ⌘+V)</b> 하세요.<br/>
-      아래에 나타난 그림을 <b>마우스 오른쪽 클릭 → 이미지 복사</b>로도 복사할 수 있어요.
+      그림을 <b>마우스 오른쪽 클릭 → '이미지를 다른 이름으로 저장'</b>을 누르면
+      이름을 정해서 저장할 수 있어요.<br/>(휴대폰·태블릿은 그림을 <b>꾹 눌러</b> 저장해요.)
     </div>
-    <div class="saved-imgs" id="savedImgs"></div>
+    <div class="saved-imgs" id="savedImgs"><div class="img-loading">그림 만드는 중… ⏳</div></div>
   </div>`));
 
-  // 완성한 이야기 — 한 장으로 정리
-  const sheet = el(`<div class="story-sheet"></div>`);
-  sheet.appendChild(el(`<div class="ss-emoji">📖</div>`));
-  sheet.appendChild(el(`<div class="ss-title">${escapeHtml(state.cover.title) || '＿＿＿'}</div>`));
-  sheet.appendChild(el(`<div class="ss-author">글·그림 · ${escapeHtml(state.cover.name) || '＿＿＿'}</div>`));
-  sheet.appendChild(el(`<hr/>`));
-  for(let i=1;i<=6;i++){
-    const t = currentText(i);
-    if(t && !t.includes('＿')){ sheet.appendChild(el(`<p class="ss-line">${escapeHtml(t.trim())}</p>`)); }
-  }
-  sheet.appendChild(el(`<hr/>`));
-  sheet.appendChild(el(`<div class="ss-note-label">✍️ 작가의 말</div>`));
-  sheet.appendChild(el(`<p class="ss-note">${escapeHtml(currentText(7)) || '＿＿＿'}</p>`));
-  app.appendChild(sheet);
-
+  buildAndShowStoryImage();   // 완성 이미지를 만들어 화면에 바로 표시(오른쪽 클릭 저장용)
   document.getElementById('imgSaveBtn').addEventListener('click', e=>saveImages(e.currentTarget));
-  document.getElementById('imgCopyBtn').addEventListener('click', e=>copyImage(e.currentTarget));
 }
 
 function escapeHtml(s){
@@ -778,15 +763,6 @@ function downloadDataURL(url,name){
   const a=document.createElement('a'); a.href=url; a.download=name;
   document.body.appendChild(a); a.click(); a.remove();
 }
-function showSavedImages(items){
-  const box=document.getElementById('savedImgs'); if(!box) return;
-  box.innerHTML='';
-  items.forEach(it=>{
-    const im=el(`<img alt="${it.label}" />`); im.src=it.url; box.appendChild(im);
-  });
-  box.scrollIntoView({behavior:'smooth', block:'start'});
-}
-
 /* 완성한 문장을 모두 한 장(A4 세로 느낌)에 정리해서 그린다 */
 function renderStorySheetCanvas(){
   const W = 1000, mx = 90, cw = W - 2*mx;          // 좌우 여백
@@ -832,36 +808,46 @@ function renderStorySheetCanvas(){
 function setSaveStatus(html){
   const s = document.getElementById('saveStatus'); if(s) s.innerHTML = html;
 }
-async function saveImages(btn){
-  const label = btn.textContent; btn.disabled = true; btn.textContent = '그림 만드는 중… ⏳';
-  try{
-    if(document.fonts && document.fonts.ready){ try{ await document.fonts.ready; }catch(e){} }
-    const url = renderStorySheetCanvas().toDataURL('image/png');
-    downloadDataURL(url, bookFilename('스토리북'));      // 한 장만 저장
-    showSavedImages([{ url, label:'완성한 이야기 한 장' }]);
-    setSaveStatus('✅ 저장했어요! 저장이 안 되면 아래 그림을 <b>마우스 오른쪽 클릭 → 이미지 저장</b> 하세요.');
-  }finally{
-    btn.disabled = false; btn.textContent = label;
-  }
+// 완성 이미지를 만들어 화면에 표시(오른쪽 클릭 → 다른 이름으로 저장 가능)
+async function buildAndShowStoryImage(){
+  if(document.fonts && document.fonts.ready){ try{ await document.fonts.ready; }catch(e){} }
+  const url = renderStorySheetCanvas().toDataURL('image/png');
+  const box = document.getElementById('savedImgs'); if(!box) return;
+  box.innerHTML = '';
+  const im = el(`<img alt="완성한 내 이야기" title="오른쪽 클릭 → 이미지를 다른 이름으로 저장" />`);
+  im.src = url; box.appendChild(im);
 }
-async function copyImage(btn){
-  const label = btn.textContent; btn.disabled = true; btn.textContent = '복사하는 중… ⏳';
+// 브라우저 '다른 이름으로 저장' 창을 띄운다(지원 시). 안 되면 일반 다운로드로 대체.
+async function saveAs(blob, filename){
+  if(window.showSaveFilePicker){
+    try{
+      const handle = await window.showSaveFilePicker({
+        suggestedName: filename,
+        types: [{ description:'PNG 이미지', accept:{ 'image/png':['.png'] } }],
+      });
+      const w = await handle.createWritable(); await w.write(blob); await w.close();
+      return 'saved';
+    }catch(e){ if(e && e.name === 'AbortError') return 'cancel'; }
+  }
+  const url = URL.createObjectURL(blob);
+  downloadDataURL(url, filename);
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  return 'download';
+}
+async function saveImages(btn){
+  const label = btn.textContent; btn.disabled = true; btn.textContent = '저장 준비 중… ⏳';
   try{
     if(document.fonts && document.fonts.ready){ try{ await document.fonts.ready; }catch(e){} }
     const canvas = renderStorySheetCanvas();
-    const url = canvas.toDataURL('image/png');
-    showSavedImages([{ url, label:'완성한 이야기 한 장' }]);   // 오른쪽 클릭 복사용으로 항상 표시
-    let copied = false;
-    if(navigator.clipboard && window.ClipboardItem){
-      try{
-        const blob = await new Promise(res=>canvas.toBlob(res, 'image/png'));
-        await navigator.clipboard.write([ new ClipboardItem({ 'image/png': blob }) ]);
-        copied = true;
-      }catch(e){ copied = false; }
+    const blob = await new Promise(res=>canvas.toBlob(res, 'image/png'));
+    const res = await saveAs(blob, bookFilename('스토리북'));
+    if(res === 'saved'){
+      setSaveStatus('✅ 저장했어요!');
+    }else if(res === 'cancel'){
+      setSaveStatus('저장을 취소했어요. 다시 눌러 주세요.');
+    }else{
+      setSaveStatus('✅ 저장했어요! 이름을 정해 저장하려면 아래 그림을 <b>마우스 오른쪽 클릭 → 이미지를 다른 이름으로 저장</b> 하세요.');
     }
-    setSaveStatus(copied
-      ? '✅ 이미지가 <b>복사</b>됐어요! 원하는 곳에 <b>붙여넣기(Ctrl+V 또는 ⌘+V)</b> 하세요.'
-      : '아래에 나타난 그림을 <b>마우스 오른쪽 클릭 → 이미지 복사</b>를 눌러 복사하세요.');
   }finally{
     btn.disabled = false; btn.textContent = label;
   }
