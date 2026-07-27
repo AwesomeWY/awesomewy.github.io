@@ -224,7 +224,11 @@
   .book-page .pg-stickers{ font-size:34px; margin-top:14px; letter-spacing:4px; }
   .book-page.back-page{ border-color:var(--green-deep); background:linear-gradient(160deg,#fff,#eefff5); }
 
-  .print-tip{ text-align:center; color:var(--ink-soft); font-size:15px; margin-top:6px; }
+  .print-tip{ text-align:center; color:var(--ink-soft); font-size:15px; margin-top:10px; line-height:1.5; }
+  .save-btns{ display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:6px; }
+  .btn-save{ background:var(--green-deep); color:#fff; font-size:20px; padding:16px 26px; }
+  .btn-save2{ background:var(--blue-deep); color:#fff; font-size:18px; }
+  .saved-imgs img{ width:100%; border-radius:14px; box-shadow:var(--shadow); margin-bottom:12px; display:block; }
 
   /* ===== 인쇄 ===== */
   @media print{
@@ -757,9 +761,17 @@ function renderPreview(){
   app.appendChild(el(`<div class="book-intro no-print">
     <div class="step-badge">📚 완성!</div>
     <h2 class="question">나만의 스토리북이 완성됐어요!</h2>
-    <p class="hint">아래에서 8쪽을 확인하고, <b>인쇄 버튼</b>으로 책으로 만들 수 있어요.</p>
-    <button class="btn btn-more" id="printBtn" style="font-size:20px;padding:16px 28px;">🖨️ 인쇄하기 (PDF로 저장)</button>
-    <div class="print-tip">인쇄 창에서 '대상'을 <b>PDF로 저장</b>으로 고르면 파일로 보관할 수 있어요.</div>
+    <p class="hint">아래에서 8쪽을 확인하고, <b>이미지로 저장</b>하거나 인쇄할 수 있어요.</p>
+    <div class="save-btns">
+      <button class="btn btn-save" id="imgAllBtn">🖼️ 이미지로 저장 (한 장에 8쪽)</button>
+      <button class="btn btn-save2" id="imgEachBtn">🗂️ 쪽마다 따로 저장</button>
+      <button class="btn btn-more" id="printBtn">🖨️ 인쇄하기 (PDF)</button>
+    </div>
+    <div class="print-tip">
+      <b>이미지로 저장</b>을 누르면 PNG 그림 파일로 저장돼요. 🖼️<br/>
+      저장이 안 되는 화면에서는 아래에 나타난 그림을 <b>꾹 눌러(오른쪽 클릭) 저장</b>하세요.
+    </div>
+    <div class="saved-imgs" id="savedImgs"></div>
   </div>`));
 
   const book = el(`<div class="book"></div>`);
@@ -794,11 +806,138 @@ function renderPreview(){
   </div>`));
 
   app.appendChild(book);
+
   document.getElementById('printBtn').addEventListener('click', ()=>window.print());
+  document.getElementById('imgAllBtn').addEventListener('click', e=>saveImages(e.currentTarget, false));
+  document.getElementById('imgEachBtn').addEventListener('click', e=>saveImages(e.currentTarget, true));
 }
 
 function escapeHtml(s){
   return (s||'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+
+/* ---------- 이미지(PNG) 저장 — Canvas로 직접 그리기 ---------- */
+const IMG_W = 900, IMG_H = 1200;
+const KFONT = '"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif';
+
+function collectBookPages(){
+  const arr = [{ kind:'cover', pageNum:'1 / 8', title:state.cover.title, author:state.cover.name, stickers:state.pages[0].stickers }];
+  for(let i=1;i<=6;i++){
+    arr.push({ kind:'content', badge:PAGES[i].badge, pageNum:`${i+1} / 8`, text:currentText(i), stickers:state.pages[i].stickers });
+  }
+  arr.push({ kind:'back', badge:PAGES[7].badge, pageNum:'8 / 8', text:currentText(7), stickers:state.pages[7].stickers });
+  return arr;
+}
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);     ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+function wrapText(ctx,text,maxW){
+  const lines=[];
+  (text||'').split('\n').forEach(para=>{
+    let line='';
+    para.split(' ').forEach(word=>{
+      const test = line ? line+' '+word : word;
+      if(ctx.measureText(test).width>maxW && line){ lines.push(line); line=word; }
+      else line=test;
+    });
+    lines.push(line);
+  });
+  return lines;
+}
+function drawStickerRow(ctx, stickers, cx, y){
+  if(!stickers || !stickers.length) return;
+  ctx.font=`72px ${KFONT}`; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(stickers.join('  '), cx, y);
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+}
+function drawPage(ctx, pg){
+  const W=IMG_W, H=IMG_H, m=30;
+  ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,W,H);
+  let border='#ffd6e7', tint='#fff7fb';
+  if(pg.kind==='cover'){ border='#5aa9ff'; tint='#eef6ff'; }
+  else if(pg.kind==='back'){ border='#2fbf71'; tint='#eefff5'; }
+  const grad=ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,'#ffffff'); grad.addColorStop(1,tint);
+  roundRect(ctx,m,m,W-2*m,H-2*m,40); ctx.fillStyle=grad; ctx.fill();
+  ctx.lineWidth=12; ctx.strokeStyle=border; ctx.stroke();
+
+  // 쪽 번호 알약
+  ctx.font=`800 30px ${KFONT}`;
+  const pw=ctx.measureText(pg.pageNum).width+44;
+  roundRect(ctx, W-m-30-pw, m+34, pw, 52, 26); ctx.fillStyle='#fff2bf'; ctx.fill();
+  ctx.fillStyle='#8a6d00'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(pg.pageNum, W-m-30-pw/2, m+34+27);
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+
+  if(pg.kind==='cover'){
+    ctx.textAlign='center';
+    ctx.font=`110px ${KFONT}`; ctx.fillText('📖', W/2, 350);
+    ctx.fillStyle='#40364d'; ctx.font=`900 62px ${KFONT}`;
+    let y=520; wrapText(ctx, pg.title||'＿＿＿', W-220).forEach(l=>{ ctx.fillText(l, W/2, y); y+=84; });
+    ctx.fillStyle='#6d6480'; ctx.font=`700 38px ${KFONT}`;
+    ctx.fillText('글·그림 · '+(pg.author||'＿＿＿'), W/2, y+30);
+    ctx.textAlign='left';
+  } else {
+    ctx.fillStyle='#a281ff'; ctx.font=`800 32px ${KFONT}`;
+    ctx.fillText(pg.badge||'', m+50, m+86);
+    ctx.fillStyle='#40364d'; ctx.font=`600 48px ${KFONT}`;
+    let y=m+210; wrapText(ctx, pg.text||'＿＿＿', W-2*m-100).forEach(l=>{ ctx.fillText(l, m+50, y); y+=76; });
+  }
+  drawStickerRow(ctx, pg.stickers, W/2, H-180);
+}
+async function renderBookCanvases(){
+  if(document.fonts && document.fonts.ready){ try{ await document.fonts.ready; }catch(e){} }
+  return collectBookPages().map(pg=>{
+    const c=document.createElement('canvas'); c.width=IMG_W; c.height=IMG_H;
+    drawPage(c.getContext('2d'), pg);
+    return c;
+  });
+}
+function bookFilename(base){
+  const nm=(state.cover.name||'').trim();
+  return (nm?nm+'_':'')+base+'.png';
+}
+function downloadDataURL(url,name){
+  const a=document.createElement('a'); a.href=url; a.download=name;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+function showSavedImages(items){
+  const box=document.getElementById('savedImgs'); if(!box) return;
+  box.innerHTML='';
+  items.forEach(it=>{
+    const im=el(`<img alt="${it.label}" />`); im.src=it.url; box.appendChild(im);
+  });
+  box.scrollIntoView({behavior:'smooth', block:'start'});
+}
+async function saveImages(btn, perPage){
+  const label=btn.textContent; btn.disabled=true; btn.textContent='그림 만드는 중… ⏳';
+  try{
+    const canvases=await renderBookCanvases();
+    if(perPage){
+      const items=[];
+      for(let i=0;i<canvases.length;i++){
+        const url=canvases[i].toDataURL('image/png');
+        downloadDataURL(url, bookFilename(`스토리북_${i+1}쪽`));
+        items.push({ url, label:`${i+1}쪽` });
+        await new Promise(r=>setTimeout(r,350));   // 브라우저 다중 저장 간격
+      }
+      showSavedImages(items);
+    }else{
+      const gap=24, H=canvases.length*IMG_H+(canvases.length-1)*gap;
+      const big=document.createElement('canvas'); big.width=IMG_W; big.height=H;
+      const ctx=big.getContext('2d'); ctx.fillStyle='#fff7fb'; ctx.fillRect(0,0,IMG_W,H);
+      canvases.forEach((c,i)=>ctx.drawImage(c,0,i*(IMG_H+gap)));
+      const url=big.toDataURL('image/png');
+      downloadDataURL(url, bookFilename('스토리북_전체'));
+      showSavedImages([{ url, label:'완성한 스토리북 8쪽' }]);
+    }
+  }finally{
+    btn.disabled=false; btn.textContent=label;
+  }
 }
 
 /* ---------- 네비게이션 ---------- */
